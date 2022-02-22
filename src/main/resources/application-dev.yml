@@ -1,0 +1,30 @@
+server:
+  port: 1995
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+#    url: jdbc:mysql://172.21.21.101:3306/ddd?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+#    username: dd
+#    password: dd!
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      maxRequestSize: 30MB
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: NON_NULL #不为空的属性才会序列化,具体属性可看JsonInclude.Include
+    serialization:
+      #        WRITE_DATES_AS_TIMESTAMPS: true # 返回的java.util.date转换成timestamp
+      FAIL_ON_EMPTY_BEANS: true # 对象为空时是否报错，默认true
+    deserialization:
+      FAIL_ON_UNKNOWN_PROPERTIES: true # 反序列化为pojo时未定义的字段将导致转换失败
+    mapper:
+      USE_BASE_TYPE_AS_DEFAULT_IMPL: true
+
+#swagger:
+#  enable: true
+
+#token:
+#  secret-key: ${KEY}

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration name="defaultConfiguration" status="INFO" strict="true" monitorInterval="60">
+    <properties>
+        <property name="pattern">[CONSOLE] %d{yyyy-MM-dd'T'HH:mm:ss.SSS.zzz} (%r ms) %5p (%c{1}:%L) - %m%n</property>
+        <property name="baseDir">log</property>
+    </properties>
+
+    <Appenders>
+        <!--在ide调试时使用-->
+        <Console name="console" type="Console">
+            <PatternLayout pattern="${pattern}" />
+        </Console>
+
+    </Appenders>
+    <Loggers>
+        <!--在ide调试时使用-->
+        <!--设定com.nd.warehouse.*包中的logger,等级为info-->
+        <Logger name="cn.sennri" level="info" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+        <!--设定其他包中的logger,等级为warn,info,error-->
+        <Root level="error">
+            <AppenderRef ref="console"/>
+        </Root>
+
+        <!--&lt;!&ndash;设定cn.fzidt.solar.fate.*包中的logger,等级为info&ndash;&gt;-->
+        <!--<Logger name="cn.fzidt.solar.fate" level="info" additivity="false">-->
+            <!--<AppenderRef ref="RollingFile"/>-->
+        <!--</Logger>-->
+        <!--&lt;!&ndash;设定其他包中的logger,等级为warn&ndash;&gt;-->
+        <!--<Root level="warn">-->
+            <!--<AppenderRef ref="RollingFile"/>-->
+        <!--</Root>-->
+    </Loggers>
+</Configuration>
