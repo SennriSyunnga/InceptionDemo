@@ -15,18 +15,13 @@ public interface Player {
 
     List<Card> getHandCards();
     InetAddress getInetAddress();
+    void revive();
 
     /**
      * 准备完成
      * @return
      */
     AtomicBoolean isReady();
-    public void activeBeginningPhaseEffect();
-    public void doPreDraw();
-    public void drawCards(Deck deck);
-    public void doAfterDraw();
-    
-    public void activeEndPhaseEffect();
 
     enum StatusEnum {
         /**

@@ -6,6 +6,9 @@ import cn.sennri.inception.player.Player;
  * client端可以看见的内容信息
  */
 public class PlayerView {
+
+    String nickname;
+
     /**
      * 手卡剩余量
      */

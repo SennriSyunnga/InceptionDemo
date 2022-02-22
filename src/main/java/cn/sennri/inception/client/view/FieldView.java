@@ -45,6 +45,7 @@ public class FieldView {
      * 是否当前处于询问响应阶段, 若为 true，可以在自己回合外发动对应的效果。
      */
     AtomicBoolean isAsking;
+
     /**
      *  被询问是否响应的对象
      */
@@ -56,11 +57,14 @@ public class FieldView {
     List<Effect> effectStack;
 
     /**
-     * 临时区域
+     * 临时墓地区域
      */
-    List<Card> tempZone;
+    List<Card> tempGraveyard;
 
-    List<Card> useZone;
+    /**
+     * 出牌区域
+     */
+    List<Card> playArea;
 
     List recentEvent;
 }

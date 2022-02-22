@@ -36,6 +36,10 @@ public class BasePlayer extends AbcPlayer{
         return this.inetAddress;
     }
 
+    public void revive(){
+        this.status = StatusEnum.ALIVE;
+    }
+
     /**
      * 准备完成
      * @return
@@ -45,38 +49,6 @@ public class BasePlayer extends AbcPlayer{
         return ready;
     }
 
-    @Override
-    public void activeBeginningPhaseEffect() {
-
-    }
-
-    @Override
-    public void doPreDraw() {
-
-    }
-
-    @Override
-    public void drawCards(Deck deck) {
-        for (int i = 0; i < 2;i++){
-            Card card = deck.draw();
-            if (card == null){
-                // 异步使得
-            }else{
-                this.hands.add(card);
-            }
-        }
-    }
-
-    @Override
-    public void doAfterDraw() {
-
-    }
-
-
-    @Override
-    public void activeEndPhaseEffect() {
-
-    }
 
     @Override
     public boolean equals(Object o) {

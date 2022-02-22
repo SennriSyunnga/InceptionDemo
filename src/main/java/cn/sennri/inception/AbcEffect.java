@@ -23,13 +23,27 @@ public abstract class AbcEffect implements Effect{
      */
     boolean deactivated;
 
+    int maxCount;
+
+    /**
+     * 回合已发动次数
+     */
+    int activeCount;
+
     @Override
     public boolean isDeactivated() {
         return deactivated;
     }
 
+     public void setTargets(Player[] targets) {
+        this.targets = targets;
+    }
 
-    public AbcEffect(Card effectSource){
+    protected AbcEffect(Card effectSource){
+        this.effectSource = effectSource;
+    }
 
+    public void refresh(){
+        this.activeCount = 0;
     }
 }

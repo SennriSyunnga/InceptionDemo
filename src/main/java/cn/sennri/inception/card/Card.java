@@ -17,6 +17,14 @@ public interface Card {
     List<Effect> getEffects();
 
     /**
+     * 获取效果列表
+     * @return
+     */
+    default Effect getEffect(int num) {
+        return getEffects().get(num);
+    }
+
+    /**
      * 获取卡的所属，若未抽取，则卡片归属为null
      * @return
      */
@@ -35,5 +43,5 @@ public interface Card {
      * @param targets 复数个效果对象
      * @return
      */
-    Effect choose(int num, Player[] targets);
+    Effect activeEffect(int num, Player[] targets);
 }

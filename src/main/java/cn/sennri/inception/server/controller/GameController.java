@@ -1,5 +1,6 @@
 package cn.sennri.inception.server.controller;
 
+import cn.sennri.inception.card.Card;
 import cn.sennri.inception.player.BasePlayer;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
@@ -122,7 +123,6 @@ public class GameController {
             lobbyBusy.set(true);
 
             List<InetAddress> list = new ArrayList<>(addressMap.keySet());
-            Collections.shuffle(list);
 
             game = new Game(list);
             CompletableFuture.runAsync(new Runnable() {
@@ -139,29 +139,13 @@ public class GameController {
         }
     }
 
+    void active(String address, int playerNum, int cardNum){
+        Player p = this.playerList.get(playerNum);
+        if (p.getInetAddress().getHostAddress().equals(address)){
+            List<Card> handCards = p.getHandCards();
 
-
-
-    //        executor.submit(new Runnable() {
-//            @Override
-//            public void run() {
-//                boolean allClear = false;
-//                while (!allClear){
-//                    allClear = true;
-//                    for(Player player:playerList){
-//                        if (!player.isReady().get()){
-//                            allClear = false;
-//                            break;
-//                        }
-//                    }
-//                    try {
-//                        TimeUnit.MILLISECONDS.sleep(500);
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
-//                }
-//            }
-//        });
+        }
+    }
 
     /**
      * 进入房间

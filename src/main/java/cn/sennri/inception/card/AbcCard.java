@@ -26,7 +26,7 @@ public abstract class AbcCard implements Card{
     }
 
     @Override
-    public Effect choose(int num, Player[] targets){
+    public Effect activeEffect(int num, Player[] targets){
         return effects.get(num);
     }
 }

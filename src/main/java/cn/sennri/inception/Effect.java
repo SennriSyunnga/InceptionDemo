@@ -4,6 +4,7 @@ package cn.sennri.inception;
 import cn.sennri.inception.card.Card;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.player.Player;
+import cn.sennri.inception.server.Game;
 
 import java.util.ArrayDeque;
 import java.util.List;
@@ -24,13 +25,23 @@ public interface Effect {
      * @param effectStack
      * @return
      */
-    public boolean isActivable(ArrayDeque<Effect> effectStack);
+    boolean isActivable(ArrayDeque<Effect> effectStack);
+
+    boolean isActivable(Game game);
+
+    void setTargets(Player[] targets);
 
     /**
      * 响应对方的动作，这时候需要指定对象、
-     * @param effectStack
+     * @param game
+     * @param targets
      */
-    public void active(ArrayDeque<Effect> effectStack);
+    default void active(Game game, Player[] targets) {
+        List<Effect> effectStack = game.getEffectChain();
+        effectStack.add(this);
+        this.setTargets(targets);
+    }
+
 
     /**
      * 正式启动效果

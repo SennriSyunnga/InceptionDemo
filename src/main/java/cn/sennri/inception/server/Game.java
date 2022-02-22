@@ -1,12 +1,14 @@
 package cn.sennri.inception.server;
 
+import cn.sennri.inception.Effect;
+import cn.sennri.inception.card.Card;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.field.DeckImpl;
-import cn.sennri.inception.player.HostPlayer;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.util.ListNode;
 
 import java.net.InetAddress;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.concurrent.*;
@@ -20,17 +22,6 @@ public class Game {
      * 用来传递当前回合信息
      */
     Phase phase;
-    /**
-     * 用于在每一次动作之后监测是否结束游戏
-     */
-    final CyclicBarrier actionBarrier = new CyclicBarrier(3);
-
-    /**
-     * 用于切换phase
-     */
-    final CyclicBarrier phaseBarrier = new CyclicBarrier(2);
-
-    CountDownLatch deckIsEmpty = new CountDownLatch(1);
 
     ListNode<Player> pointer;
 
@@ -43,16 +34,28 @@ public class Game {
      */
     List<Integer> locks = new CopyOnWriteArrayList<>();
 
-
     Player host;
 
     AtomicBoolean gameResult = null;
 
+    List<Effect> effectChain;
+
+    public List<Effect> getEffectChain() {
+        return this.effectChain;
+    }
+
+    final Player[] players;
+
+    GameStatusEnum statusEnum;
+
 
     public Game(List<InetAddress> list) {
+        Collections.shuffle(list);
+
         // 根据人数 处理list，形成游戏布局
 
         roles = new CopyOnWriteArrayList<>();
+
         // 分发角色牌
         int size = list.size();
         CompletableFuture[] futures = new CompletableFuture[size];
@@ -70,24 +73,28 @@ public class Game {
                         return roleName;
                     }
                 }
-//               return "BasePlayer";
             });
-            futures[i - 1] = res;
+            futures[i] = res;
         }
         CompletableFuture.allOf(futures);
         roles = null;
-        Player[] ans = new Player[size - 1];
-        // todo 可以整合到supplyAsync里头
+        players = new Player[size];
+
         try {
+            players[0] = getNewPlayer((String)futures[0].get(), list.get(0), null);
             for (int i = 0; i < size; i++) {
                 CompletableFuture<String> future = futures[i];
-                ans[i] = getNewPlayer(future.get(), list.get(i + 1), null);
+                players[i] = getNewPlayer(future.get(), list.get(i + 1), null);
             }
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
 
         initialize();
+    }
+
+    void setSecret(int secret){
+        this.secret = secret;
     }
 
     public void pushHostCard(InetAddress host) {
@@ -101,36 +108,21 @@ public class Game {
 
     }
 
-
-    public void draw(){
-
+    void active(String address, int playerNum, int cardNum, int effectNum, Player[] target){
+        Player p = this.players[playerNum];
+        if (p.getInetAddress().getHostAddress().equals(address)){
+            List<Card> handCards = p.getHandCards();
+            Card c = handCards.get(cardNum);
+            Effect e = c.getEffect(effectNum);
+            if(e.isActivable(this)){
+                e.active(this, target);
+            }
+        }
     }
 
-    public void revive(){
-
+    public void revive(Player p){
+        p.revive();
     }
-
-//    /**
-//     * 等待加入，构成players 等待ready状态。
-//     */
-//    public void waitCustomer() throws InterruptedException {
-//        // 等待主机连结;
-//        // 等待结束条件： 达到人数上限 或 达到人数下限且玩家均已准备
-//        while (playerNum.get() < MIN_PLAYER) {
-//
-//            // 并发list接受多线程的playerList添加
-//            // 计时器？
-//        }
-//        // 若满足最小玩家条件，则进入下面的条件
-//        // 这是异步向下
-//
-//        while (!isReady(playerList)) {
-//            // 等待时间
-//        }
-//        //
-//        //
-//        // 方法返回条件：玩家均已准备
-//    }
 
     public void initialize() {
         // 有环对象随机抽取梦主
@@ -149,90 +141,11 @@ public class Game {
     /**
      * @return if host wins
      */
-    public boolean start() throws BrokenBarrierException, InterruptedException, ExecutionException {
+    public void start() throws BrokenBarrierException, InterruptedException, ExecutionException {
         // 应该为守护线程
-        CompletableFuture.runAsync(() -> {
-            try {
-                while (gameResult == null) {
-                    Player current = pointer.getNode();
-                    // 等待抽卡阶段结束
-                    phaseBarrier.await();
-                    phase = phase.toNext();
-
-                    // 此时是出牌阶段，等待出牌阶段结束
-                    actionBarrier.await();
-                    phase = phase.toNext();
-
-
-                    // 此时是结束阶段，等待结束阶段结束
-                    actionBarrier.await();
-                    phase = phase.toNext();
-                    // 切换当前用户
-                    pointer = pointer.getNext();
-                }
-            } catch (InterruptedException | BrokenBarrierException e) {
-                e.printStackTrace();
-            }
-        });
-
-
-        CompletableFuture<Boolean> hostWin = CompletableFuture.supplyAsync(() -> {
-            while (true) {
-                try {
-                    actionBarrier.await();
-                    if (deck.isEmpty()) {
-                        return true;
-                    }
-                } catch (InterruptedException | BrokenBarrierException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-        CompletableFuture<Boolean> guestWin = CompletableFuture.supplyAsync(() -> {
-            while (true) {
-                try {
-                    actionBarrier.await();
-                    if (locks.get(secret) == 0) {
-                        return false;
-                    }
-                } catch (InterruptedException | BrokenBarrierException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-        Boolean result = null;
-        try {
-            result = (Boolean) CompletableFuture.anyOf(hostWin, guestWin).get();
-            return result;
-        } catch (ExecutionException e) {
-            throw e;
-        }
+        this.statusEnum = GameStatusEnum.PLAYING;
     }
 
-    public void stepOn() throws BrokenBarrierException, InterruptedException {
-        this.actionBarrier.await();
-    }
-
-    //    public boolean start() throws BrokenBarrierException, InterruptedException {
-//        initialize();
-//
-//        while (true) {
-//            Player current = pointer.getNode();
-//
-//            // 等待current发动效果
-//
-//
-//            // 当前回合结束
-//            barrier.await();
-//            if(deck.isEmpty()){
-//                return true;
-//            }else if (locks[secret] == 0){
-//                return false;
-//            }
-//            // 切换当前用户
-//            pointer = pointer.getNext();
-//        }
-//    }
     public void pushView() {
 
     }
@@ -250,6 +163,11 @@ public class Game {
     // 若相同则结束循环，开始pop效果，依次处理。
     // 每次循环结束时询问指针向后移动
 
+    public enum GameStatusEnum {
+        WAITING,
+        PLAYING,
+        END
+    }
 
     public enum Phase {
         /**

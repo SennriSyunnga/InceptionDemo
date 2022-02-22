@@ -3,6 +3,7 @@ package cn.sennri.inception.card;
 import cn.sennri.inception.AbcEffect;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.player.Player;
+import cn.sennri.inception.server.Game;
 
 import java.util.ArrayDeque;
 import java.util.Collections;
@@ -36,7 +37,7 @@ public class CreateCardsFromVacant extends AbcCard{
      * @return
      */
     @Override
-    public cn.sennri.inception.Effect choose(int num, Player[] targets) {
+    public cn.sennri.inception.Effect activeEffect(int num, Player[] targets) {
         return null;
     }
 
@@ -45,7 +46,9 @@ public class CreateCardsFromVacant extends AbcCard{
      */
     public final static class Effect extends AbcEffect {
 
-
+        public boolean isActivable(Game game) {
+            return true;
+        }
         public Effect(Card effectSource) {
             super(effectSource);
         }
@@ -53,15 +56,6 @@ public class CreateCardsFromVacant extends AbcCard{
         @Override
         public boolean isActivable(ArrayDeque<cn.sennri.inception.Effect> effectStack) {
             return true;
-        }
-
-        /**
-         * 响应对方的动作，这时候需要指定对象、
-         * @param effectStack
-         */
-        @Override
-        public void active(ArrayDeque<cn.sennri.inception.Effect> effectStack) {
-
         }
 
         /**
