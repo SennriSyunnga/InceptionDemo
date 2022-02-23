@@ -6,16 +6,21 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 public interface Deck {
+    /**
+     * 抽卡
+     * @return
+     */
     public Card draw();
 
+
+    public Card remove();
+
     /**
-     * 由于展示多于从上端、下端操作。
-     * @param num
+     * 卡组顶弃牌
      * @param graveyard
-     * @param exclusionZone
+     * @param tempGraveyard
      */
-    public void abandon(int num, List<Card> graveyard, List<Card> exclusionZone);
+    void abandon(List<Card> graveyard, List<Card> tempGraveyard);
     public void shuffle();
     public boolean isEmpty();
-    CountDownLatch getHostWinCondition();
 }

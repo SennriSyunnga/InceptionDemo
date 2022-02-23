@@ -1,19 +1,39 @@
 package cn.sennri.inception.field;
+
 import cn.sennri.inception.card.Card;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.concurrent.CountDownLatch;
+import java.util.List;
 
 
-public abstract class AbcDeck {
+public abstract class AbcDeck{
     /**
-     * 获取deck的倒计时Latch，以便于Game保存
-     *
-     * todo 这个设计不行，因为这样的设计在卡片放回卡顶时无法加计数
-     * @return
+     * 没有具体实现，请在实现类里头进行赋值
      */
-    abstract CountDownLatch getHostWinCondition();
-    final static int MAX_CAPABILITY = 70;
-    public Deque<Card> deck = new ArrayDeque<>(MAX_CAPABILITY);
+    public List<Card> deck;
+
+    /**
+     * 指向卡顶
+     */
+    public int topIndexPointer;
+
+    /**
+     * 效果来源，通过{@link Card#getOwner()}可以获取到效果的发动者。
+     */
+    public Card effectSource;
+
+    public Card draw() {
+        // 考虑在这里放个listener。
+        return remove();
+    }
+
+     void abandon(List<Card> graveyard, List<Card> tempGraveyard){
+        Card c = remove();
+        tempGraveyard.add(c);
+        graveyard.add(c);
+    }
+
+    public Card remove() {
+        return deck.remove(topIndexPointer);
+    }
+
 }

@@ -16,16 +16,6 @@ import java.util.List;
  * @Created by Sennri
  */
 public interface Effect {
-    /**
-     * 通过effectStack确定是否前面发动的卡可以被你响应
-     * 是否存在骰子事件
-     * 是否存在
-     * 墓地里是否有需要的卡
-     * 是否有骰子结果
-     * @param effectStack
-     * @return
-     */
-    boolean isActivable(ArrayDeque<Effect> effectStack);
 
     boolean isActivable(Game game);
 
@@ -42,17 +32,17 @@ public interface Effect {
         this.setTargets(targets);
     }
 
+    /**
+     * 获取效果来源卡片
+     * @return
+     */
+    Card getEffectSource();
 
     /**
-     * 正式启动效果
-     * @param effectStack
-     * @param deck
-     * @param graveyard
-     * @param exclusionZone
-     * @param source
-     * @param target
+     * 执行启动效果
+     * 这里写效果的处理逻辑
      */
-    public void takeEffect(ArrayDeque<Effect> effectStack, Deck deck, List<Card> graveyard, List<Card> exclusionZone, Player source, Player[] target);
+    public void takeEffect(Game game);
 
     /**
      * 是否被无效

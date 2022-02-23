@@ -11,11 +11,35 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * @author Sennri
  */
-public class BasePlayer extends AbcPlayer{
+public class BasePlayer implements Player {
+    public AtomicBoolean ready;
+
+    public void setReady(AtomicBoolean ready) {
+        this.ready = ready;
+    }
+
+    public AtomicBoolean getReady() {
+        return ready;
+    }
+
+    /**
+     * 存活或者死亡
+     */
+    public StatusEnum status;
+    /**
+     * 手牌
+     */
+    public List<Card> hands;
+    /**
+     * 正反面
+     */
+    public ModeEnum mode;
+    /**
+     * 位置 1 2 3 4层
+     */
+    public PositionEnum pos;
 
     final public int decryptTimes = 1;
-
-    AtomicBoolean ready;
 
     public final InetAddress inetAddress;
 
@@ -32,10 +56,16 @@ public class BasePlayer extends AbcPlayer{
     }
 
     @Override
+    public void draw(Deck deck) {
+        hands.add(deck.draw());
+    }
+
+    @Override
     public InetAddress getInetAddress() {
         return this.inetAddress;
     }
 
+    @Override
     public void revive(){
         this.status = StatusEnum.ALIVE;
     }

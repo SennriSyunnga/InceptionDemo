@@ -104,6 +104,10 @@ public class Game {
 
     List<String> roles;
 
+    public Deck getDeck() {
+        return deck;
+    }
+
     public void pushGuestCard(List<InetAddress> list) {
 
     }

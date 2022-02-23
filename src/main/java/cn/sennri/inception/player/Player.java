@@ -12,9 +12,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  */
 public interface Player {
-
+    /**
+     * 获取当前手卡
+     * @return
+     */
     List<Card> getHandCards();
+
+    void draw(Deck deck);
+
     InetAddress getInetAddress();
+
+    /**
+     * 复活
+     */
     void revive();
 
     /**

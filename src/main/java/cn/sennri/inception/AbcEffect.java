@@ -9,7 +9,7 @@ import cn.sennri.inception.player.Player;
  * @Date 2022/2/7 11:07
  * @Created by Sennri
  */
-public abstract class AbcEffect implements Effect{
+public abstract class AbcEffect implements Effect {
     /**
      * 效果的来源
      */
@@ -31,19 +31,25 @@ public abstract class AbcEffect implements Effect{
     int activeCount;
 
     @Override
+    public Card getEffectSource() {
+        return effectSource;
+    }
+
+    @Override
     public boolean isDeactivated() {
         return deactivated;
     }
 
-     public void setTargets(Player[] targets) {
+    @Override
+    public void setTargets(Player[] targets) {
         this.targets = targets;
     }
 
-    protected AbcEffect(Card effectSource){
+    protected AbcEffect(Card effectSource) {
         this.effectSource = effectSource;
     }
 
-    public void refresh(){
+    public void refresh() {
         this.activeCount = 0;
     }
 }

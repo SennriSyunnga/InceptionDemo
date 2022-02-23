@@ -46,33 +46,24 @@ public class CreateCardsFromVacant extends AbcCard{
      */
     public final static class Effect extends AbcEffect {
 
+        @Override
         public boolean isActivable(Game game) {
             return true;
         }
+
         public Effect(Card effectSource) {
             super(effectSource);
         }
 
-        @Override
-        public boolean isActivable(ArrayDeque<cn.sennri.inception.Effect> effectStack) {
-            return true;
-        }
 
         /**
          * 正式启动效果
-         * @param effectStack
-         * @param graveyard
-         * @param exclusionZone
-         * @param source
-         * @param target
          */
         @Override
-        public void takeEffect(ArrayDeque<cn.sennri.inception.Effect> effectStack,
-                               Deck deck,
-                               List<Card> graveyard,
-                               List<Card> exclusionZone,
-                               Player source,
-                               Player[] target) {
+        public void takeEffect(Game game) {
+            Card c = this.getEffectSource();
+            Player source = c.getOwner();
+            Deck deck = game.getDeck();
             List<Card> handCards = source.getHandCards();
             for (int i = 0;i < 2;i++){
                 Card card = deck.draw();
