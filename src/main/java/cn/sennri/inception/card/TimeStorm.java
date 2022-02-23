@@ -1,12 +1,9 @@
 package cn.sennri.inception.card;
 
 import cn.sennri.inception.AbcEffect;
-import cn.sennri.inception.Effect;
 import cn.sennri.inception.field.Deck;
-import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
 
-import java.util.ArrayDeque;
 import java.util.List;
 
 /**
@@ -16,6 +13,10 @@ public class TimeStorm {
 
 
     public static class DiscardEffect extends AbcEffect{
+
+        protected DiscardEffect(Card effectSource) {
+            super(effectSource);
+        }
 
         /**
          * 通过effectStack确定是否前面发动的卡可以被你响应
@@ -38,9 +39,12 @@ public class TimeStorm {
          */
         @Override
         public void takeEffect(Game game) {
-
+            List<Card> tempGraveyard = game.getTempGraveyard();
+            List<Card> graveyard = game.getGraveyard();
+            Deck deck = game.getDeck();
+            for (int i = 0;i < 10;i++){
+                deck.abandon(graveyard, tempGraveyard);
+            }
         }
-
-
     }
 }

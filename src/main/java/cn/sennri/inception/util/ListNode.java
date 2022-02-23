@@ -2,8 +2,8 @@ package cn.sennri.inception.util;
 
 public class ListNode<T> {
     T node;
-    ListNode<T> next;
-    ListNode<T> pre;
+    public ListNode<T> next;
+    public ListNode<T> pre;
     ListNode(T node){this.node = node;}
     ListNode(T node, ListNode<T> pre, ListNode<T> next){
         this(node);

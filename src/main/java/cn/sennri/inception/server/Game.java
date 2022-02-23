@@ -6,11 +6,10 @@ import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.field.DeckImpl;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.util.ListNode;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.net.InetAddress;
-import java.util.Collections;
-import java.util.EnumMap;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -29,10 +28,15 @@ public class Game {
      * 秘密所在层数
      */
     volatile int secret = 0;
+//    /**
+//     * 检测locks，若金库所在的层归零，则游戏返回true;
+//     */
+//    List<Integer> locks = new CopyOnWriteArrayList<>();
+
     /**
      * 检测locks，若金库所在的层归零，则游戏返回true;
      */
-    List<Integer> locks = new CopyOnWriteArrayList<>();
+   int[] locks = new int[4];
 
     Player host;
 
@@ -47,6 +51,15 @@ public class Game {
     final Player[] players;
 
     GameStatusEnum statusEnum;
+
+    /**
+     * 墓地列表
+     */
+    List<Card> graveyard;
+    /**
+     * 除外区列表
+     */
+    List<Card> exclusionZone;
 
 
     public Game(List<InetAddress> list) {
@@ -112,6 +125,19 @@ public class Game {
 
     }
 
+    ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
+    {
+        taskExecutor.setCorePoolSize(20);
+        taskExecutor.setMaxPoolSize(200);
+        taskExecutor.setQueueCapacity(25);
+        taskExecutor.setKeepAliveSeconds(200);
+        taskExecutor.setThreadNamePrefix("oKong-");
+        // 线程池对拒绝任务（无线程可用）的处理策略，目前只支持AbortPolicy、CallerRunsPolicy；默认为后者
+        taskExecutor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        taskExecutor.initialize();
+    }
+
+
     void active(String address, int playerNum, int cardNum, int effectNum, Player[] target){
         Player p = this.players[playerNum];
         if (p.getInetAddress().getHostAddress().equals(address)){
@@ -120,13 +146,91 @@ public class Game {
             Effect e = c.getEffect(effectNum);
             if(e.isActivable(this)){
                 e.active(this, target);
+
+                taskExecutor.submit(() -> {
+                    while (!effectChain.isEmpty()){
+                        // asking
+
+                    }
+                });
+                //这里submit一个异步线程。进行后续的处理
             }
         }
     }
 
-    public void revive(Player p){
-        p.revive();
+    /**
+     * 具有响应权的玩家
+     */
+    Player AskedPlayer;
+
+    Map<Player, ListNode<Player>> playerListNodeMap = new HashMap<>();
+
+    void asking(Player p){
+        statusEnum = GameStatusEnum.ASKING;
+        ListNode<Player> asking = playerListNodeMap.get(p);
+        ListNode<Player> asked = asking.next;
+        while (!asked.getNode().equals(p)){
+            sendAsk();// 应当触发推送trigger
+
+            // 等待时长
+
+            //
+
+            asked = asked.getNext();
+        }
+        // 将asked 置为下一顺位玩家。
+        // 将asking玩家置为当前玩家
+        //
+//        if ()
+//        statusEnum = GameStatusEnum.PLAYING;
     }
+
+    void sendAsk(){}
+
+    /**
+     * 临时墓地区域
+     */
+    List<Card> tempGraveyard;
+
+    /**
+     * 出牌区域
+     */
+    List<Card> playArea;
+
+    public List<Card> getTempGraveyard() {
+        return tempGraveyard;
+    }
+
+    public List<Card> getPlayArea() {
+        return playArea;
+    }
+
+    public List<Card> getGraveyard() {
+        return graveyard;
+    }
+
+    public List<Card> getExclusionZone() {
+        return exclusionZone;
+    }
+
+    void decryptLock(int layerNum){
+        if (locks[layerNum] == 0){
+            throw new IllegalArgumentException("");
+        }else{
+            locks[layerNum]--;
+            if (locks[layerNum] == 0){
+                if (layerNum == secret){
+                    // notify GameStop
+                }else{
+                    // notify NightMare
+                }
+            }
+        }
+    }
+
+    //    public void revive(Player p){
+//        p.revive();
+//    }
 
     public void initialize() {
         // 有环对象随机抽取梦主
@@ -170,6 +274,7 @@ public class Game {
     public enum GameStatusEnum {
         WAITING,
         PLAYING,
+        ASKING,
         END
     }
 

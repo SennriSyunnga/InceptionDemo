@@ -1,11 +1,15 @@
 package cn.sennri.inception.field;
 
 import cn.sennri.inception.card.Card;
+import cn.sennri.inception.server.Listener;
 
 import java.util.List;
 
 
 public abstract class AbcDeck{
+
+    List<Listener> listeners;
+
     /**
      * 没有具体实现，请在实现类里头进行赋值
      */
@@ -32,8 +36,19 @@ public abstract class AbcDeck{
         graveyard.add(c);
     }
 
+    void notifyDeckListeners(){
+        for (Listener l:listeners){
+            l.onHostSuccess();
+        }
+    }
+
     public Card remove() {
-        return deck.remove(topIndexPointer);
+        Card c = deck.remove(topIndexPointer);
+        if (topIndexPointer == 0){
+            notifyDeckListeners();
+        }
+        topIndexPointer--;
+        return c;
     }
 
 }

@@ -2,13 +2,13 @@ package cn.sennri.inception.field;
 
 import cn.sennri.inception.card.Card;
 
-
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 
 
 public class DeckImpl extends AbcDeck implements Deck {
+
+
 
     final static int MAX_CAPABILITY = 70;
 
@@ -37,8 +37,5 @@ public class DeckImpl extends AbcDeck implements Deck {
         return this.deck.isEmpty();
     }
 
-    @Override
-    public CountDownLatch getHostWinCondition() {
-        return null;
-    }
+
 }

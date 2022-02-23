@@ -5,7 +5,6 @@ import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
 
-import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.List;
 
@@ -54,7 +53,6 @@ public class CreateCardsFromVacant extends AbcCard{
         public Effect(Card effectSource) {
             super(effectSource);
         }
-
 
         /**
          * 正式启动效果
