@@ -1,6 +1,7 @@
 package cn.sennri.inception.card;
 
 import cn.sennri.inception.AbcEffect;
+import cn.sennri.inception.Effect;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.server.Game;
 
@@ -9,8 +10,22 @@ import java.util.List;
 /**
  * 时间风暴
  */
-public class TimeStorm {
+public class TimeStorm extends AbcCard {
 
+    @Override
+    public List<Effect> getEffects() {
+        return null;
+    }
+
+    @Override
+    public Effect getEffect(int num) {
+        return null;
+    }
+
+    @Override
+    public boolean isActivable(Game game) {
+        return false;
+    }
 
     public static class DiscardEffect extends AbcEffect{
 
