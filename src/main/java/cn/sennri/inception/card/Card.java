@@ -3,6 +3,7 @@ package cn.sennri.inception.card;
 
 import cn.sennri.inception.Effect;
 import cn.sennri.inception.player.Player;
+import cn.sennri.inception.server.Game;
 
 import java.util.List;
 
@@ -44,4 +45,13 @@ public interface Card {
      * @return
      */
     Effect activeEffect(int num, Player[] targets);
+
+    default boolean isActivable(Game game){
+        for (Effect e:this.getEffects()){
+            if (e.isActivable(game)){
+                return true;
+            }
+        }
+        return false;
+    }
 }

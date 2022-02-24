@@ -6,7 +6,7 @@ import cn.sennri.inception.server.Listener;
 import java.util.List;
 
 
-public abstract class AbcDeck{
+public abstract class AbcDeck implements Deck{
 
     List<Listener> listeners;
 
@@ -25,30 +25,38 @@ public abstract class AbcDeck{
      */
     public Card effectSource;
 
+    /**
+     * 可以支持牌顶抽卡的listener
+     * @return
+     */
+    @Override
     public Card draw() {
-        // 考虑在这里放个listener。
         return remove();
     }
 
-     void abandon(List<Card> graveyard, List<Card> tempGraveyard){
+    @Override
+    public void abandon(List<Card> graveyard, List<Card> tempGraveyard) {
         Card c = remove();
         tempGraveyard.add(c);
         graveyard.add(c);
     }
 
-    void notifyDeckListeners(){
-        for (Listener l:listeners){
+    /**
+     * 告知牌库为空
+     */
+    void notifyDeckListeners() {
+        for (Listener l : listeners) {
             l.onHostSuccess();
         }
     }
 
+    @Override
     public Card remove() {
         Card c = deck.remove(topIndexPointer);
-        if (topIndexPointer == 0){
+        if (topIndexPointer == 0) {
             notifyDeckListeners();
         }
         topIndexPointer--;
         return c;
     }
-
 }

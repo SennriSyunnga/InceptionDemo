@@ -7,12 +7,16 @@ import java.util.concurrent.CountDownLatch;
 
 public interface Deck {
     /**
-     * 抽卡
+     * 抽卡，底层调用remove
      * @return
      */
     public Card draw();
 
 
+    /**
+     * 移除牌顶卡片，该方法不会失败，除非初始卡库就为空值。
+     * @return
+     */
     public Card remove();
 
     /**
@@ -21,6 +25,15 @@ public interface Deck {
      * @param tempGraveyard
      */
     void abandon(List<Card> graveyard, List<Card> tempGraveyard);
+
+    /**
+     * 洗牌
+     */
     public void shuffle();
+
+    /**
+     * 牌库判空
+     * @return
+     */
     public boolean isEmpty();
 }

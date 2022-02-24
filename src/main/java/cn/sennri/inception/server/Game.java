@@ -1,6 +1,7 @@
 package cn.sennri.inception.server;
 
 import cn.sennri.inception.Effect;
+import cn.sennri.inception.Event;
 import cn.sennri.inception.card.Card;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.field.DeckImpl;
@@ -36,7 +37,7 @@ public class Game {
     /**
      * 检测locks，若金库所在的层归零，则游戏返回true;
      */
-   int[] locks = new int[4];
+    int[] locks = new int[4];
 
     Player host;
 
@@ -94,7 +95,7 @@ public class Game {
         players = new Player[size];
 
         try {
-            players[0] = getNewPlayer((String)futures[0].get(), list.get(0), null);
+            players[0] = getNewPlayer((String) futures[0].get(), list.get(0), null);
             for (int i = 0; i < size; i++) {
                 CompletableFuture<String> future = futures[i];
                 players[i] = getNewPlayer(future.get(), list.get(i + 1), null);
@@ -106,7 +107,7 @@ public class Game {
         initialize();
     }
 
-    void setSecret(int secret){
+    void setSecret(int secret) {
         this.secret = secret;
     }
 
@@ -138,22 +139,88 @@ public class Game {
     }
 
 
-    void active(String address, int playerNum, int cardNum, int effectNum, Player[] target){
+    void active(String address, int playerNum, int cardNum, int effectNum, Player[] target) {
         Player p = this.players[playerNum];
-        if (p.getInetAddress().getHostAddress().equals(address)){
+        // 校验是否为本人 其实也可以直接按地址校验，则无需playerNum
+        if (p.getInetAddress().getHostAddress().equals(address)) {
             List<Card> handCards = p.getHandCards();
             Card c = handCards.get(cardNum);
             Effect e = c.getEffect(effectNum);
-            if(e.isActivable(this)){
+            // 这里已经保证了是回合主或者是Asked才能执行，保证效果发动的合法
+            if (e.isActivable(this)) {
                 e.active(this, target);
-
-                taskExecutor.submit(() -> {
-                    while (!effectChain.isEmpty()){
-                        // asking
-
-                    }
-                });
+                asking(p);
                 //这里submit一个异步线程。进行后续的处理
+            } else {
+                throw new IllegalStateException("当前效果不能发动。");
+            }
+        }
+    }
+
+    /**
+     * asking主循环结束后可以执行
+     * @param p
+     */
+    void asking(Player p) {
+        // 改变指针指向
+        askingPlayer = playerListNodeMap.get(p);
+        // 若已经处于询问递归当中，说明此时这不是最外层的问询，则什么也不做。
+        if (!isAsking.get()) {
+            isAsking.set(true);
+            Future<?> future = taskExecutor.submit(() -> {
+                // 主循环
+                try {
+                    askedPlayer = askingPlayer;
+                    while (isAsking.get()) {
+                        //更新信息
+                        pushView();
+                        // 应当在此等待对方应答或者发动效果。
+                        waitAnswer();
+                    }
+                } catch (BrokenBarrierException | InterruptedException e) {
+                    e.printStackTrace();
+                }
+                // asking和其延伸问询全部结束
+                takeAllEffects();
+            });
+        }else{
+            answerIfAsking();
+        }
+    }
+
+    CyclicBarrier answer = new CyclicBarrier(2);
+
+    void waitAnswer() throws BrokenBarrierException, InterruptedException {
+        answer.await(); // 等待触发
+    }
+
+    /**
+     * 若当前有阻塞的waitAnswer，则响应该Answer
+     */
+    void answerIfAsking() {
+        if (answer.getNumberWaiting() == 1) {
+            try {
+                ListNode<Player> next = askedPlayer.next;
+                askedPlayer = next;
+                answer.await();
+            } catch (InterruptedException | BrokenBarrierException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * 当前用户放弃响应操作
+     */
+    void pass(){
+        if(!isAsking.get()){
+            throw new IllegalStateException("当前并未进行询问");
+        }else{
+            // 若放弃该操作的玩家是当前asking玩家，说明此时整轮玩家都放弃了操作
+            if (askedPlayer == askingPlayer){
+                isAsking.set(false);
+            }else{
+                answerIfAsking();
             }
         }
     }
@@ -161,41 +228,57 @@ public class Game {
     /**
      * 具有响应权的玩家
      */
-    Player AskedPlayer;
+    volatile ListNode<Player> askedPlayer;
+
+    volatile ListNode<Player> askingPlayer;
 
     Map<Player, ListNode<Player>> playerListNodeMap = new HashMap<>();
 
-    void asking(Player p){
-        statusEnum = GameStatusEnum.ASKING;
-        ListNode<Player> asking = playerListNodeMap.get(p);
-        ListNode<Player> asked = asking.next;
-        while (!asked.getNode().equals(p)){
-            sendAsk();// 应当触发推送trigger
+    volatile List<Event> eventList;
 
-            // 等待时长
+    AtomicBoolean isAsking = new AtomicBoolean(false);
 
-            //
-
-            asked = asked.getNext();
+    // 不会同时执行多个以下方法
+    // 不会在这个过程中有新的卡加入该卡池。
+    // 该过程执行完一定会清空效果池
+    void takeAllEffects() {
+        while (!effectChain.isEmpty() || !tempGraveyard.isEmpty() || !eventList.isEmpty()) {
+            int lastChainIndex = effectChain.size() - 1;
+            while (lastChainIndex > 0) {
+                Effect e = effectChain.remove(lastChainIndex);
+                e.takeEffect(this);
+                // 多线程更新数据到客户端
+                pushView();
+                // event?
+                lastChainIndex--;
+            }
+            // 墓地效果起效
+            int tempGraveyardSize = tempGraveyard.size();
+            while (tempGraveyardSize > 0) {
+                Card c = tempGraveyard.remove(0);
+                if (c.isActivable(this)) {
+                    c.getEffect(0).active(this, null);
+                }
+                // 这个效率很低
+                tempGraveyardSize--;
+            }
+            // 开始新一轮响应 这个过程可能添加新的effect进入effectChain
+            asking(host);
+            // 响应结束或者无响应
+            eventList.clear();
         }
-        // 将asked 置为下一顺位玩家。
-        // 将asking玩家置为当前玩家
-        //
-//        if ()
-//        statusEnum = GameStatusEnum.PLAYING;
     }
-
-    void sendAsk(){}
 
     /**
      * 临时墓地区域
      */
-    List<Card> tempGraveyard;
+    List<Card> tempGraveyard = new CopyOnWriteArrayList<>();
 
     /**
      * 出牌区域
      */
     List<Card> playArea;
+
 
     public List<Card> getTempGraveyard() {
         return tempGraveyard;
@@ -213,15 +296,15 @@ public class Game {
         return exclusionZone;
     }
 
-    void decryptLock(int layerNum){
-        if (locks[layerNum] == 0){
+    void decryptLock(int layerNum) {
+        if (locks[layerNum] == 0) {
             throw new IllegalArgumentException("");
-        }else{
+        } else {
             locks[layerNum]--;
-            if (locks[layerNum] == 0){
-                if (layerNum == secret){
+            if (locks[layerNum] == 0) {
+                if (layerNum == secret) {
                     // notify GameStop
-                }else{
+                } else {
                     // notify NightMare
                 }
             }

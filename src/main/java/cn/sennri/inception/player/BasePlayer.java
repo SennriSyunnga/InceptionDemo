@@ -7,11 +7,15 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Sennri
  */
 public class BasePlayer implements Player {
+
+    public AtomicInteger defaultDrawTime = new AtomicInteger(1);
+
     public AtomicBoolean ready;
 
     public void setReady(AtomicBoolean ready) {
