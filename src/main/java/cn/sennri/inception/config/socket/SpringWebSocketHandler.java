@@ -7,8 +7,11 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+
 
 public class SpringWebSocketHandler extends TextWebSocketHandler {
 
@@ -36,10 +39,11 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
      */
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-
-        System.out.println("成功建立websocket连接!");
-        String userId = (String) session.getAttributes().get(USER_ID);
-        users.put(userId,session);
+        InetAddress inetAddress = Optional.ofNullable(session.getRemoteAddress()).orElseThrow(NullPointerException::new).getAddress();
+        logger.debug("WebSocket成功建立与{}的连接!", inetAddress);
+        String userId = (String) session.getHandshakeHeaders().get(USER_ID).get(0);
+//        String userId = (String) session.getAttributes().get(USER_ID);
+ //       users.put(userId, session);
         System.out.println("当前线上用户数量:"+ users.size());
 
         //这块会实现自己业务，比如，当用户登录后，会把离线消息推送给用户
@@ -52,11 +56,11 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
      */
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) throws Exception {
-        logger.debug("关闭websocket连接");
-        String userId = (String) session.getAttributes().get(USER_ID);
-        System.out.println("用户"+userId+"已退出！");
-        users.remove(userId);
-        System.out.println("剩余在线用户"+users.size());
+        logger.debug("关闭web socket连接");
+  //      String userId = (String) session.getAttributes().get(USER_ID);
+  //      System.out.println("用户"+userId+"已退出！");
+//        users.remove(userId);
+  //      System.out.println("剩余在线用户"+users.size());
     }
 
     /**
@@ -65,17 +69,27 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         super.handleTextMessage(session, message);
+        String payload = message.getPayload();
         // 收到消息，自定义处理机制，实现业务
-        System.out.println("服务器收到消息："+message);
+        logger.debug("服务器收到消息：{}", payload);
         // 这里实现消息的反序列化处理
-        if(message.getPayload().startsWith("#anyone#")){
-            sendMessageToUser((String) session.getAttributes().get(USER_ID),
-                    new TextMessage("服务器单发：" +message.getPayload()));
-        }else if(message.getPayload().startsWith("#everyone#")){
+
+        if("0".equals(payload)){
+            // reply
+            session.sendMessage(new TextMessage("1"));
+        }else if("2".equals(payload)){
             sendMessageToUsers(new TextMessage("服务器群发：" +message.getPayload()));
         }else{
 
         }
+//        if(message.getPayload().startsWith("#anyone#")){
+//            sendMessageToUser((String) session.getAttributes().get(USER_ID),
+//                    new TextMessage("服务器单发：" +message.getPayload()));
+//        }else if(message.getPayload().startsWith("#everyone#")){
+//            sendMessageToUsers(new TextMessage("服务器群发：" +message.getPayload()));
+//        }else{
+//
+//        }
     }
 
     @Override
@@ -83,14 +97,14 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
         if(session.isOpen()){
             session.close();
         }
-        logger.debug("传输出现异常，关闭websocket连接... ");
-        String userId= (String) session.getAttributes().get(USER_ID);
-        users.remove(userId);
+        exception.printStackTrace();
+        logger.debug("传输出现异常，关闭websocket连接:");
+    //    String userId= (String) session.getAttributes().get(USER_ID);
+    //    users.remove(userId);
     }
 
     @Override
     public boolean supportsPartialMessages() {
-
         return false;
     }
 

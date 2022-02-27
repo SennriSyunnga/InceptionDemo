@@ -1,7 +1,7 @@
 package cn.sennri.inception.server;
 
 import cn.sennri.inception.Effect;
-import cn.sennri.inception.Event;
+import cn.sennri.inception.event.Event;
 import cn.sennri.inception.card.Card;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.field.DeckImpl;

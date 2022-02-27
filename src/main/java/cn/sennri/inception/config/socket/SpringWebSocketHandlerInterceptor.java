@@ -1,13 +1,14 @@
 package cn.sennri.inception.config.socket;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
-import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor;
-import javax.servlet.http.HttpSession;
+
 import java.util.Map;
 
+@Slf4j
 /**
  * 控制握手
  */
@@ -17,18 +18,18 @@ public class SpringWebSocketHandlerInterceptor extends HttpSessionHandshakeInter
                                    ServerHttpResponse response,
                                    WebSocketHandler wsHandler,
                                    Map<String, Object> attributes) throws Exception {
-        System.out.println("Before Handshake");
-        if (request instanceof ServletServerHttpRequest) {
-            ServletServerHttpRequest servletRequest = (ServletServerHttpRequest) request;
-            HttpSession session = servletRequest.getServletRequest().getSession(false);
-            if (session != null) {
-                //使用userName区分WebSocketHandler，以便定向发送消息 这一段不是脱裤子放屁？
-                String userName = (String) session.getAttribute("SESSION_USERNAME");
-                if (userName!=null) {
-                    attributes.put("WEB_SOCKET_USERID",userName);
-                }
-            }
-        }
+        System.out.println("Handshake is starting.");
+//        if (request instanceof ServletServerHttpRequest) {
+//            ServletServerHttpRequest servletRequest = (ServletServerHttpRequest) request;
+//            HttpSession session = servletRequest.getServletRequest().getSession(false);
+//            if (session != null) {
+//                //使用userName区分WebSocketHandler，以便定向发送消息 这一段不是脱裤子放屁？
+//                String userName = (String) session.getAttribute("SESSION_USERNAME");
+//                if (userName!=null) {
+//                    attributes.put("WEB_SOCKET_USERID",userName);
+//                }
+//            }
+//        }
         return super.beforeHandshake(request, response, wsHandler, attributes);
     }
 
@@ -38,5 +39,6 @@ public class SpringWebSocketHandlerInterceptor extends HttpSessionHandshakeInter
                                WebSocketHandler wsHandler,
                                Exception ex) {
         super.afterHandshake(request, response, wsHandler, ex);
+        log.debug("Handshake already done.");
     }
 }

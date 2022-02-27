@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
@@ -24,7 +25,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @author Sennri
  */
-@SuppressWarnings("AlibabaRemoveCommentedCode")
 @RequestMapping("/game")
 @RestController
 public class GameController {
@@ -38,8 +38,15 @@ public class GameController {
     public GameController() throws UnknownHostException {
     }
 
+    @RequestMapping(value = "/echo", method = RequestMethod.GET)
+    @ResponseBody
+    public String echo() throws BrokenBarrierException, InterruptedException {
+        return "ok";
+    }
+
+
     @RequestMapping(value = "/start", method = RequestMethod.POST)
-    void test() throws BrokenBarrierException, InterruptedException {
+    public void test() throws BrokenBarrierException, InterruptedException {
         logger.info("game start");
         gameEndBarrier = new CyclicBarrier(2);
         game = new Game(new ArrayList<>());

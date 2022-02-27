@@ -8,14 +8,11 @@ import java.util.List;
 
 public class DeckImpl extends AbcDeck implements Deck {
 
-
-
     final static int MAX_CAPABILITY = 70;
 
     public DeckImpl(){
         deck = new ArrayList<>(MAX_CAPABILITY);
     }
-
 
     /**
      * 效果逻辑不该在deck里完成。

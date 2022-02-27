@@ -15,11 +15,11 @@
     <Loggers>
         <!--在ide调试时使用-->
         <!--设定com.nd.warehouse.*包中的logger,等级为info-->
-        <Logger name="cn.sennri" level="info" additivity="false">
+        <Logger name="cn.sennri" level="debug" additivity="false">
             <AppenderRef ref="console"/>
         </Logger>
         <!--设定其他包中的logger,等级为warn,info,error-->
-        <Root level="error">
+        <Root level="warn">
             <AppenderRef ref="console"/>
         </Root>
 

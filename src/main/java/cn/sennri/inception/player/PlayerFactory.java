@@ -6,7 +6,7 @@ import java.net.InetAddress;
  * @author DELL
  */
 public class PlayerFactory {
-    public static Player getNewPlayer(String playerName, InetAddress inetAddress, AbcPlayer.ModeEnum mode){
+    public static Player getNewPlayer(String playerName, InetAddress inetAddress, Player.ModeEnum mode){
         if ("BasePlayer".equals(playerName)){
             return new BasePlayer(inetAddress);
         }
