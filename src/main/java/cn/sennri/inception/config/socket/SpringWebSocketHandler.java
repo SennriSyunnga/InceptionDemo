@@ -6,11 +6,12 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 public class SpringWebSocketHandler extends TextWebSocketHandler {
@@ -20,7 +21,9 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
     /**
      * Map来存储WebSocketSession，key用USER_ID 即在线用户列表
      */
-    private static final Map<String, WebSocketSession> users;
+    private static final Map<String, WebSocketSession> usersToSessionMap;
+
+    private static final Map<WebSocketSession, String> sessionToUserMap;
 
     /**
      * 用户自定义标识 对应监听器从的key
@@ -29,10 +32,12 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
 
 
     static {
-        users =  new HashMap<String, WebSocketSession>();
+        usersToSessionMap = new ConcurrentHashMap<>();
+        sessionToUserMap = new ConcurrentHashMap<>();
     }
 
-    public SpringWebSocketHandler() {}
+    public SpringWebSocketHandler() {
+    }
 
     /**
      * 连接成功时候，会触发页面上onopen方法
@@ -41,14 +46,15 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         InetAddress inetAddress = Optional.ofNullable(session.getRemoteAddress()).orElseThrow(NullPointerException::new).getAddress();
         logger.debug("WebSocket成功建立与{}的连接!", inetAddress);
-        String userId = (String) session.getHandshakeHeaders().get(USER_ID).get(0);
-//        String userId = (String) session.getAttributes().get(USER_ID);
- //       users.put(userId, session);
-        System.out.println("当前线上用户数量:"+ users.size());
-
-        //这块会实现自己业务，比如，当用户登录后，会把离线消息推送给用户
-        //TextMessage returnMessage = new TextMessage("成功建立socket连接，你将收到的离线");
-        //session.sendMessage(returnMessage);
+        // 若非空，则携带信息，当前为测试，因此不强制要求携带信息；
+        Optional.ofNullable(session.getHandshakeHeaders().get(USER_ID)).ifPresent(o -> {
+            String name = o.get(0);
+            logger.debug("会话{}将自身标识为{}, 将使用该身份作为唯一标识",inetAddress, name);
+            usersToSessionMap.put(name, session);
+            sessionToUserMap.put(session, name);
+            logger.debug("将{}登记为用户{}", inetAddress, name);
+        });
+        logger.info("当前线上用户数量:{}", sessionToUserMap.size());
     }
 
     /**
@@ -56,11 +62,14 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
      */
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) throws Exception {
+
+        Optional.ofNullable(session.getHandshakeHeaders().get(USER_ID)).ifPresent(o -> {
+            String name = sessionToUserMap.remove(session);
+            usersToSessionMap.remove(name);
+            logger.info("断开用户{}与服务器的链接", name);
+        });
         logger.debug("关闭web socket连接");
-  //      String userId = (String) session.getAttributes().get(USER_ID);
-  //      System.out.println("用户"+userId+"已退出！");
-//        users.remove(userId);
-  //      System.out.println("剩余在线用户"+users.size());
+        logger.debug("剩余在线用户{}", usersToSessionMap.size());
     }
 
     /**
@@ -73,34 +82,25 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
         // 收到消息，自定义处理机制，实现业务
         logger.debug("服务器收到消息：{}", payload);
         // 这里实现消息的反序列化处理
-
-        if("0".equals(payload)){
+        if ("0".equals(payload)) {
             // reply
             session.sendMessage(new TextMessage("1"));
-        }else if("2".equals(payload)){
-            sendMessageToUsers(new TextMessage("服务器群发：" +message.getPayload()));
-        }else{
+        } else if ("2".equals(payload)) {
+            session.sendMessage(new TextMessage("end"));
+        } else {
 
         }
-//        if(message.getPayload().startsWith("#anyone#")){
-//            sendMessageToUser((String) session.getAttributes().get(USER_ID),
-//                    new TextMessage("服务器单发：" +message.getPayload()));
-//        }else if(message.getPayload().startsWith("#everyone#")){
-//            sendMessageToUsers(new TextMessage("服务器群发：" +message.getPayload()));
-//        }else{
-//
-//        }
     }
 
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
-        if(session.isOpen()){
+        if (session.isOpen()) {
             session.close();
         }
         exception.printStackTrace();
         logger.debug("传输出现异常，关闭websocket连接:");
-    //    String userId= (String) session.getAttributes().get(USER_ID);
-    //    users.remove(userId);
+        //    String userId= (String) session.getAttributes().get(USER_ID);
+        //    users.remove(userId);
     }
 
     @Override
@@ -116,17 +116,15 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
      * @param message
      */
     public void sendMessageToUser(String userId, TextMessage message) {
-        for (String id : users.keySet()) {
-            if (id.equals(userId)) {
-                try {
-                    if (users.get(id).isOpen()) {
-                        users.get(id).sendMessage(message);
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                break;
+        WebSocketSession session = usersToSessionMap.get(userId);
+        try {
+            if (session.isOpen()) {
+                session.sendMessage(message);
+            }else{
+                throw new IllegalStateException("Target session is closed.");
             }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -136,13 +134,16 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
      * @param message
      */
     public void sendMessageToUsers(TextMessage message) {
-        for (String userId : users.keySet()) {
+        for ( Map.Entry<String, WebSocketSession> e: usersToSessionMap.entrySet()) {
             try {
-                if (users.get(userId).isOpen()) {
-                    users.get(userId).sendMessage(message);
+                WebSocketSession webSocketSession = e.getValue();
+                if (webSocketSession.isOpen()) {
+                    webSocketSession.sendMessage(message);
+                }else{
+                    logger.warn("{} is offline.", e.getKey());
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (IOException ex) {
+                ex.printStackTrace();
             }
         }
     }

@@ -6,11 +6,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 
 @Slf4j
-@SpringBootApplication(exclude= {DataSourceAutoConfiguration.class})
+@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
 public class InceptionApplication {
-	public static void main(String[] args) {
-		log.debug("app start!");
-		SpringApplication.run(InceptionApplication.class, args);
-	}
-
+    public static void main(String[] args) {
+        log.debug("app start!");
+        SpringApplication.run(InceptionApplication.class, args);
+    }
 }

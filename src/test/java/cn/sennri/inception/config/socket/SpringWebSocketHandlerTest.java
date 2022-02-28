@@ -60,7 +60,13 @@ public class SpringWebSocketHandlerTest {
             }
         });
         boolean status = websocket.send("0");
-        return;
+        try {
+            TimeUnit.MINUTES.sleep(2);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        // 这里得保证有足够的市场，否则消息发不出去。
+        websocket.close(1000, "test finished");
     }
 
 }

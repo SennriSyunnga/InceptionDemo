@@ -1,28 +1,32 @@
 package cn.sennri.inception;
 
-
 import cn.sennri.inception.card.Card;
-import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
 
-import java.util.ArrayDeque;
 import java.util.List;
 
 /**
- * @Classname Effect
- * @Description TODO
- * @Date 2022/2/6 22:40
- * @Created by Sennri
+ * 效果接口
+ * @author Sennri
  */
 public interface Effect {
-
+    /**
+     * 效果是否可以发动
+     * @param game
+     * @return
+     */
     boolean isActivable(Game game);
 
+    /**
+     * 设置效果对象
+     * @param targets
+     */
     void setTargets(Player[] targets);
 
     /**
      * 响应对方的动作，这时候需要指定对象、
+     * 可能会被重写。例如，有些卡的效果发动时是在墓地的
      * @param game
      * @param targets
      */
@@ -41,13 +45,14 @@ public interface Effect {
     /**
      * 执行启动效果
      * 这里写效果的处理逻辑
+     * @param game 影响对象
      */
-    public void takeEffect(Game game);
+    void takeEffect(Game game);
 
     /**
      * 是否被无效
      * 用来判断该效果是否被终止了效果结算
      * @return
      */
-    public boolean isDeactivated();
+    boolean isDeactivated();
 }

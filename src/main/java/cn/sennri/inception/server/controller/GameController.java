@@ -38,13 +38,6 @@ public class GameController {
     public GameController() throws UnknownHostException {
     }
 
-    @RequestMapping(value = "/echo", method = RequestMethod.GET)
-    @ResponseBody
-    public String echo() throws BrokenBarrierException, InterruptedException {
-        return "ok";
-    }
-
-
     @RequestMapping(value = "/start", method = RequestMethod.POST)
     public void test() throws BrokenBarrierException, InterruptedException {
         logger.info("game start");

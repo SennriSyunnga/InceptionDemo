@@ -127,6 +127,7 @@ public class Game {
     }
 
     ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
+
     {
         taskExecutor.setCorePoolSize(20);
         taskExecutor.setMaxPoolSize(200);
@@ -139,6 +140,14 @@ public class Game {
     }
 
 
+    /**
+     * 从玩家手牌发动卡片
+     * @param address
+     * @param playerNum
+     * @param cardNum
+     * @param effectNum
+     * @param target
+     */
     void active(String address, int playerNum, int cardNum, int effectNum, Player[] target) {
         Player p = this.players[playerNum];
         // 校验是否为本人 其实也可以直接按地址校验，则无需playerNum
@@ -172,7 +181,7 @@ public class Game {
                 try {
                     askedPlayer = askingPlayer;
                     while (isAsking.get()) {
-                        //更新信息
+                        // 更新信息
                         pushView();
                         // 应当在此等待对方应答或者发动效果。
                         waitAnswer();
@@ -183,7 +192,7 @@ public class Game {
                 // asking和其延伸问询全部结束
                 takeAllEffects();
             });
-        }else{
+        } else {
             answerIfAsking();
         }
     }
@@ -212,14 +221,14 @@ public class Game {
     /**
      * 当前用户放弃响应操作
      */
-    void pass(){
-        if(!isAsking.get()){
+    void pass() {
+        if (!isAsking.get()) {
             throw new IllegalStateException("当前并未进行询问");
-        }else{
+        } else {
             // 若放弃该操作的玩家是当前asking玩家，说明此时整轮玩家都放弃了操作
-            if (askedPlayer == askingPlayer){
+            if (askedPlayer == askingPlayer) {
                 isAsking.set(false);
-            }else{
+            } else {
                 answerIfAsking();
             }
         }
