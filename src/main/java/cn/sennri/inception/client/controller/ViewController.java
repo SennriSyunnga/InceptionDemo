@@ -1,49 +1,79 @@
 package cn.sennri.inception.client.controller;
 
+import cn.sennri.inception.message.ClientActiveMessage;
+import cn.sennri.inception.message.Message;
+import cn.sennri.inception.message.ServerAnswerActiveMessage;
+import cn.sennri.inception.model.listener.Listener;
+import cn.sennri.inception.model.vo.ResponseBodyImpl;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 import okio.ByteString;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author DELL
  */
 @Slf4j
 @RequestMapping(value = "/client")
+@RestController
 public class ViewController {
     /**
      * 可以从配置文件里读
      */
     private final static int PORT = 1995;
 
+    @Autowired
+    private ObjectMapper jacksonObjectMapper;
+
     private WebSocket webSocket = null;
+
     private final OkHttpClient mClient = new OkHttpClient.Builder()
             .readTimeout(3, TimeUnit.SECONDS)
             .writeTimeout(3, TimeUnit.SECONDS)
             .connectTimeout(3, TimeUnit.SECONDS)
             .build();
 
+    @ResponseBody
     @RequestMapping(value = "/login", method = RequestMethod.POST)
-    public void login(String name, String targetAddress){
-        final String url = "ws://"+ targetAddress +":"+ PORT +"/socket/server";
+    public void login(@RequestParam String name, @RequestParam String remoteAddr) {
+        final String url = "ws://" + remoteAddr + ":" + PORT + "/socket/server";
         // 构建一个连接请求对象
         Request request = new Request.Builder().get().url(url).header("WEB_SOCKET_USERID", name).build();
         this.webSocket = mClient.newWebSocket(request, new WebSocketListener() {
             @Override
             public void onOpen(WebSocket webSocket, Response response) {
                 super.onOpen(webSocket, response);
-                log.debug("连接到服务器{}成功。", targetAddress);
+                log.debug("连接到服务器{}成功。", remoteAddr);
             }
 
             @Override
             public void onMessage(WebSocket webSocket, String text) {
                 super.onMessage(webSocket, text);
-                if ("1".equals(text)){
-                    webSocket.send("2");
+                Message m = null;
+                try {
+                    m = jacksonObjectMapper.readValue(text, Message.class);
+                } catch (JsonProcessingException e) {
+                    log.error("消息:{}反序列化失败", text);
+                    e.printStackTrace();
+                    // todo 如果这里是阻塞消息，是不时应该在这个地方通知对方失败了，防止接着阻塞？
+                }
+                if (m instanceof ServerAnswerActiveMessage) {
+                    ServerAnswerActiveMessage answer = (ServerAnswerActiveMessage) m;
+                    Long id = answer.getMessageId();
+                    @SuppressWarnings("unchecked")
+                    Listener<Boolean> booleanListener = (Listener<Boolean>) map.remove(id);
+                    // todo 这里可不可能存在映带回来时已经消费完的可能？
+                    booleanListener.setBlocking(true);
                 }
                 log.debug("Client receives message:{}", text);
             }
@@ -56,34 +86,69 @@ public class ViewController {
             @Override
             public void onClosed(WebSocket webSocket, int code, String reason) {
                 super.onClosed(webSocket, code, reason);
-                log.debug("已断开和服务器{}的链接。", targetAddress);
+                log.debug("已断开和服务器{}的链接。", remoteAddr);
             }
 
             @Override
             public void onFailure(WebSocket webSocket, Throwable throwable, Response response) {
                 super.onFailure(webSocket, throwable, response);
-                log.error("连接到服务器{}失败。", targetAddress);
+                log.error("连接到服务器{}失败。", remoteAddr);
             }
         });
+        // 这里应该阻塞地等待当前open是否成功。
     }
 
+    @ResponseBody
     @RequestMapping(value = "/logout", method = RequestMethod.POST)
-    public cn.sennri.inception.model.vo.Response<String> logout(){
-        if (this.webSocket == null){
+    public ResponseBodyImpl<String> logout() {
+        if (this.webSocket == null) {
             throw new IllegalStateException("不合法的关闭");
-        }else{
+        } else {
             webSocket.close(1000, "用户选择退出服务。");
-            return cn.sennri.inception.model.vo.Response.createNewResponse(HttpStatus.ACCEPTED);
+            return ResponseBodyImpl.createNewResponse(HttpStatus.ACCEPTED);
         }
     }
 
+    /**
+     * 维护一个等待结果的消息map，根据MessageId取消息。
+     */
+    Map<Long, Listener<?>> map = new ConcurrentHashMap<>();
+
+    AtomicLong messageNum = new AtomicLong(0);
+
+    /**
+     * 获取消息的版本号，如果到达long极限值，则清空至0L
+     * @return
+     */
+    private long getMessageNum(){
+        return messageNum.getAndUpdate(o -> o == Long.MAX_VALUE ? 0 : o + 1);
+    }
+
+    @ResponseBody
     @RequestMapping(value = "/test", method = RequestMethod.POST)
-    public cn.sennri.inception.model.vo.Response<String> active(){
-        if (this.webSocket == null){
-            throw new IllegalStateException("不合法的关闭");
-        }else{
-            
+    public ResponseBodyImpl active() throws JsonProcessingException {
+        if (this.webSocket == null) {
+            throw new IllegalStateException("未连接到服务器，请检查是否已登录");
+        } else {
+            long messageId = getMessageNum();
+            ClientActiveMessage m = new ClientActiveMessage();
+            m.setMessageId(messageId);
+            this.webSocket.send(jacksonObjectMapper.writeValueAsString(m));
+            Listener<Boolean> booleanListener = new Listener<>();
+            map.put(messageId, booleanListener);
+            boolean answer;
+            try {
+                answer = booleanListener.getBlocking();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                return ResponseBodyImpl.createNewResponse(HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+            log.debug("Active {}!", answer);
+            if (answer) {
+                return ResponseBodyImpl.createNewResponse(HttpStatus.OK);
+            } else {
+                return ResponseBodyImpl.createNewResponse(HttpStatus.CONFLICT);
+            }
         }
     }
-
 }

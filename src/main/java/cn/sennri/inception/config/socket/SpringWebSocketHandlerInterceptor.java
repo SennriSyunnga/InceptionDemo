@@ -19,17 +19,6 @@ public class SpringWebSocketHandlerInterceptor extends HttpSessionHandshakeInter
                                    WebSocketHandler wsHandler,
                                    Map<String, Object> attributes) throws Exception {
         System.out.println("Handshake is starting.");
-//        if (request instanceof ServletServerHttpRequest) {
-//            ServletServerHttpRequest servletRequest = (ServletServerHttpRequest) request;
-//            HttpSession session = servletRequest.getServletRequest().getSession(false);
-//            if (session != null) {
-//                //使用userName区分WebSocketHandler，以便定向发送消息 这一段不是脱裤子放屁？
-//                String userName = (String) session.getAttribute("SESSION_USERNAME");
-//                if (userName!=null) {
-//                    attributes.put("WEB_SOCKET_USERID",userName);
-//                }
-//            }
-//        }
         return super.beforeHandshake(request, response, wsHandler, attributes);
     }
 

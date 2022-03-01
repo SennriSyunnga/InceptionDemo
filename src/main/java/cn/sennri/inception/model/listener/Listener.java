@@ -1,21 +1,25 @@
 package cn.sennri.inception.model.listener;
 
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.CountDownLatch;
 
 public class Listener<T> {
-    private CyclicBarrier barrier = new CyclicBarrier(2);
+    private final CountDownLatch barrier = new CountDownLatch(1);
 
     private volatile T value;
 
-    synchronized public T getBlocking() throws BrokenBarrierException, InterruptedException {
+    /**
+     * 该方法应该只能被调用一次
+     * @return
+     * @throws InterruptedException
+     */
+    public T getBlocking() throws InterruptedException {
         barrier.await();
         return value;
     }
 
-    synchronized public void setBlocking(T v) throws BrokenBarrierException, InterruptedException {
+    public void setBlocking(T v) {
         this.value = v;
-        barrier.await();
+        barrier.countDown();
     }
 
 }

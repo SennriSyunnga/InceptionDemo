@@ -1,7 +1,13 @@
 package cn.sennri.inception.config.socket;
 
+import cn.sennri.inception.message.ClientActiveMessage;
+import cn.sennri.inception.message.Message;
+import cn.sennri.inception.message.ServerAnswerActiveMessage;
+import cn.sennri.inception.model.listener.Listener;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -11,10 +17,15 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
 
 
 public class SpringWebSocketHandler extends TextWebSocketHandler {
+
+    @Autowired
+    ObjectMapper objectMapper;
+
 
     private static final Logger logger = LoggerFactory.getLogger(SpringWebSocketHandler.class);
 
@@ -82,13 +93,16 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
         // 收到消息，自定义处理机制，实现业务
         logger.debug("服务器收到消息：{}", payload);
         // 这里实现消息的反序列化处理
-        if ("0".equals(payload)) {
-            // reply
-            session.sendMessage(new TextMessage("1"));
-        } else if ("2".equals(payload)) {
-            session.sendMessage(new TextMessage("end"));
-        } else {
 
+        Message m = objectMapper.readValue(payload , Message.class);
+        if (m instanceof ClientActiveMessage){
+            ClientActiveMessage apply = (ClientActiveMessage) m;
+            Long id = apply.getMessageId();
+            ServerAnswerActiveMessage r = new ServerAnswerActiveMessage();
+            r.setMessageId(id);
+            r.setReply(true);
+            String s = objectMapper.writeValueAsString(r);
+            session.sendMessage(new TextMessage(s));
         }
     }
 
