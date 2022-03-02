@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @Slf4j
 @RequestMapping(value = "/client")
 @RestController
-public class ViewController {
+public class ClientController {
     /**
      * 可以从配置文件里读
      */
@@ -53,6 +53,7 @@ public class ViewController {
             @Override
             public void onOpen(WebSocket webSocket, Response response) {
                 super.onOpen(webSocket, response);
+                map.clear();
                 log.debug("连接到服务器{}成功。", remoteAddr);
             }
 
@@ -72,10 +73,15 @@ public class ViewController {
                     Long id = answer.getMessageId();
                     @SuppressWarnings("unchecked")
                     Listener<Boolean> booleanListener = (Listener<Boolean>) map.remove(id);
-                    // todo 这里可不可能存在映带回来时已经消费完的可能？
-                    booleanListener.setBlocking(true);
+                    // todo 这里可不可能存在应答回来时， 消息已经消费完的可能？
+                    // 可能 前一条消息应答过长，重连了一次
+                    if (booleanListener!=null){
+                        booleanListener.setBlocking(true);
+                    }else{
+                        log.debug("Message id{} is consumed already", id);
+                    }
                 }
-                log.debug("Client receives message:{}", text);
+                log.debug("Client received message:{}", text);
             }
 
             @Override
@@ -86,13 +92,13 @@ public class ViewController {
             @Override
             public void onClosed(WebSocket webSocket, int code, String reason) {
                 super.onClosed(webSocket, code, reason);
-                log.debug("已断开和服务器{}的链接。", remoteAddr);
+                log.debug("已成功断开和服务器{}的链接。", remoteAddr);
             }
 
             @Override
             public void onFailure(WebSocket webSocket, Throwable throwable, Response response) {
                 super.onFailure(webSocket, throwable, response);
-                log.error("连接到服务器{}失败。", remoteAddr);
+                log.error("连接到服务器{}意外地失败了。", remoteAddr);
             }
         });
         // 这里应该阻塞地等待当前open是否成功。

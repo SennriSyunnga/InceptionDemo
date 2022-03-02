@@ -8,17 +8,17 @@ import org.springframework.web.socket.server.support.HttpSessionHandshakeInterce
 
 import java.util.Map;
 
-@Slf4j
 /**
  * 控制握手
  */
+@Slf4j
 public class SpringWebSocketHandlerInterceptor extends HttpSessionHandshakeInterceptor {
     @Override
     public boolean beforeHandshake(ServerHttpRequest request,
                                    ServerHttpResponse response,
                                    WebSocketHandler wsHandler,
                                    Map<String, Object> attributes) throws Exception {
-        System.out.println("Handshake is starting.");
+        log.debug("Handshake is starting.");
         return super.beforeHandshake(request, response, wsHandler, attributes);
     }
 

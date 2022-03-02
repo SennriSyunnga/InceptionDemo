@@ -1,14 +1,14 @@
 package cn.sennri.inception.field;
 
 import cn.sennri.inception.card.Card;
-import cn.sennri.inception.server.Listener;
+import cn.sennri.inception.server.GameFinishedListener;
 
 import java.util.List;
 
 
 public abstract class AbcDeck implements Deck{
 
-    List<Listener> listeners;
+    List<GameFinishedListener> gameFinishedListeners;
 
     /**
      * 没有具体实现，请在实现类里头进行赋值
@@ -45,7 +45,7 @@ public abstract class AbcDeck implements Deck{
      * 告知牌库为空
      */
     void notifyDeckListeners() {
-        for (Listener l : listeners) {
+        for (GameFinishedListener l : gameFinishedListeners) {
             l.onHostSuccess();
         }
     }

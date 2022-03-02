@@ -4,20 +4,19 @@ import cn.sennri.inception.card.Card;
 import cn.sennri.inception.player.BasePlayer;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
-import cn.sennri.inception.util.IpAddressUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.socket.WebSocketHandler;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -28,6 +27,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RequestMapping("/game")
 @RestController
 public class GameController {
+
+    @Autowired
+    WebSocketHandler webSocketHandler;
+
     private static final Logger logger = LogManager.getLogger(GameController.class.getName());
     Game game;
 
@@ -38,49 +41,13 @@ public class GameController {
     public GameController() throws UnknownHostException {
     }
 
+    Player testPlayer = new BasePlayer(InetAddress.getLocalHost());
+
     @RequestMapping(value = "/start", method = RequestMethod.POST)
     public void test() throws BrokenBarrierException, InterruptedException {
         logger.info("game start");
-        gameEndBarrier = new CyclicBarrier(2);
-        game = new Game(new ArrayList<>());
-        while (deck.get() > 0){
-            TimeUnit.SECONDS.sleep(1);
-            logger.info("draw phase");
-            gameEndBarrier.await();
-            logger.info("draw phase");
-            gameEndBarrier.await();
-            logger.info("draw phase");
-            gameEndBarrier.await();
-        }
-        logger.info("game finish");
     }
 
-    Player testPlayer = new BasePlayer(InetAddress.getLocalHost());
-
-    @RequestMapping(value = "/trigger", method = RequestMethod.POST)
-    void test2(HttpServletRequest request, HttpServletResponse response)
-            throws BrokenBarrierException, InterruptedException, UnknownHostException {
-        String ipAddress = IpAddressUtil.getIpAddress(request);
-        InetAddress address = InetAddress.getByName(ipAddress);
-        if (testPlayer.getInetAddress().equals(address)){
-            gameEndBarrier.await();
-            logger.info("trigger");
-        }else{
-            logger.warn("you are not the player of this turn.");
-        }
-    }
-
-    @RequestMapping(value = "/draw", method = RequestMethod.POST)
-    void draw(HttpServletRequest request, HttpServletResponse response)
-            throws BrokenBarrierException, InterruptedException, UnknownHostException {
-        String ipAddress = IpAddressUtil.getIpAddress(request);
-        InetAddress address = InetAddress.getByName(ipAddress);
-        if (testPlayer.getInetAddress().equals(address)){
-            logger.info("deck decrement:" + deck.decrementAndGet());
-        }else{
-            logger.warn("you are not the player of this turn.");
-        }
-    }
 
     final static int MIN_PLAYER = 2;
     final static int MAX_PLAYER = 3;
@@ -200,6 +167,9 @@ public class GameController {
      * 在每个push完成后，需要依次进行askclient，判断是否需要
      */
     void push(){
+
+
+
 
     }
 

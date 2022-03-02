@@ -5,14 +5,19 @@ import cn.sennri.inception.event.Event;
 import cn.sennri.inception.card.Card;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.field.DeckImpl;
+import cn.sennri.inception.model.listener.Listener;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.util.ListNode;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static cn.sennri.inception.player.PlayerFactory.getNewPlayer;
 
@@ -62,6 +67,8 @@ public class Game {
      */
     List<Card> exclusionZone;
 
+    // Player里应该维护一个socket
+
 
     public Game(List<InetAddress> list) {
         Collections.shuffle(list);
@@ -105,6 +112,30 @@ public class Game {
         }
 
         initialize();
+    }
+
+    /**
+     * 维护一个等待结果的消息map，根据MessageId取消息。
+     */
+    Map<Long, Listener<?>> map = new ConcurrentHashMap<>();
+
+    AtomicLong messageNum = new AtomicLong(0);
+
+    /**
+     * 获取消息的版本号，如果到达long极限值，则清空至0L
+     * @return
+     */
+    private long getMessageNum(){
+        return messageNum.getAndUpdate(o -> o == Long.MAX_VALUE ? 0 : o + 1);
+    }
+
+
+    private String sendChooseRoleMessage(WebSocketSession session) throws IOException, InterruptedException {
+        long id = getMessageNum();
+        session.sendMessage(new TextMessage(""));
+        Listener<String> listener = new Listener<>();
+        map.put(id, listener);
+        return listener.getBlocking();
     }
 
     void setSecret(int secret) {
@@ -197,6 +228,9 @@ public class Game {
         }
     }
 
+    /**
+     * 可重用
+     */
     CyclicBarrier answer = new CyclicBarrier(2);
 
     void waitAnswer() throws BrokenBarrierException, InterruptedException {
@@ -206,7 +240,7 @@ public class Game {
     /**
      * 若当前有阻塞的waitAnswer，则响应该Answer
      */
-    void answerIfAsking() {
+    synchronized void answerIfAsking() {
         if (answer.getNumberWaiting() == 1) {
             try {
                 ListNode<Player> next = askedPlayer.next;
@@ -253,23 +287,25 @@ public class Game {
     void takeAllEffects() {
         while (!effectChain.isEmpty() || !tempGraveyard.isEmpty() || !eventList.isEmpty()) {
             int lastChainIndex = effectChain.size() - 1;
-            while (lastChainIndex > 0) {
-                Effect e = effectChain.remove(lastChainIndex);
-                e.takeEffect(this);
-                // 多线程更新数据到客户端
-                pushView();
-                // event?
-                lastChainIndex--;
-            }
-            // 墓地效果起效
-            int tempGraveyardSize = tempGraveyard.size();
-            while (tempGraveyardSize > 0) {
-                Card c = tempGraveyard.remove(0);
-                if (c.isActivable(this)) {
-                    c.getEffect(0).active(this, null);
+            synchronized (this){
+                while (lastChainIndex > 0) {
+                    Effect e = effectChain.remove(lastChainIndex);
+                    e.takeEffect(this);
+                    // 多线程更新数据到客户端
+                    pushView();
+                    // event?
+                    lastChainIndex--;
                 }
-                // 这个效率很低
-                tempGraveyardSize--;
+                // 墓地效果起效
+                int tempGraveyardSize = tempGraveyard.size();
+                while (tempGraveyardSize > 0) {
+                    Card c = tempGraveyard.remove(0);
+                    if (c.isActivable(this)) {
+                        c.getEffect(0).active(this, null);
+                    }
+                    // 这个效率很低
+                    tempGraveyardSize--;
+                }
             }
             // 开始新一轮响应 这个过程可能添加新的effect进入effectChain
             asking(host);

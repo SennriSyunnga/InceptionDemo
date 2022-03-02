@@ -3,7 +3,6 @@ package cn.sennri.inception.config.socket;
 import cn.sennri.inception.message.ClientActiveMessage;
 import cn.sennri.inception.message.Message;
 import cn.sennri.inception.message.ServerAnswerActiveMessage;
-import cn.sennri.inception.model.listener.Listener;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,8 +15,8 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -54,7 +53,7 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
      * 连接成功时候，会触发页面上onopen方法
      */
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+    public void afterConnectionEstablished(WebSocketSession session) {
         InetAddress inetAddress = Optional.ofNullable(session.getRemoteAddress()).orElseThrow(NullPointerException::new).getAddress();
         logger.debug("WebSocket成功建立与{}的连接!", inetAddress);
         // 若非空，则携带信息，当前为测试，因此不强制要求携带信息；
@@ -79,8 +78,8 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
             usersToSessionMap.remove(name);
             logger.info("断开用户{}与服务器的链接", name);
         });
-        logger.debug("关闭web socket连接");
-        logger.debug("剩余在线用户{}", usersToSessionMap.size());
+        logger.debug("关闭web socket连接;\n" +
+                "剩余在线用户{}",usersToSessionMap.size());
     }
 
     /**
@@ -92,8 +91,6 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
         String payload = message.getPayload();
         // 收到消息，自定义处理机制，实现业务
         logger.debug("服务器收到消息：{}", payload);
-        // 这里实现消息的反序列化处理
-
         Message m = objectMapper.readValue(payload , Message.class);
         if (m instanceof ClientActiveMessage){
             ClientActiveMessage apply = (ClientActiveMessage) m;
