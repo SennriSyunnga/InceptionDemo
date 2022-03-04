@@ -3,6 +3,7 @@ package cn.sennri.inception.player;
 
 import cn.sennri.inception.card.Card;
 import cn.sennri.inception.field.Deck;
+import cn.sennri.inception.util.Utils;
 
 import java.net.InetAddress;
 import java.util.List;
@@ -13,19 +14,39 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public interface Player {
     /**
-     * 获取当前手卡
+     * 产生roll点结果
      * @return
      */
-    List<Card> getHandCards();
+    default int roll(){
+        return Utils.roll();
+    }
 
-    void draw(Deck deck);
-
-    InetAddress getInetAddress();
+    /**
+     * 产生Shoot卡片roll结果
+     * @return
+     */
+    default int rollShootResult(){
+        return roll();
+    }
 
     /**
      * 复活
      */
     void revive();
+
+
+    void draw(Deck deck);
+
+    /**
+     * 获取当前手卡
+     * @return
+     */
+    List<Card> getHandCards();
+
+
+
+    InetAddress getInetAddress();
+
 
     /**
      * 准备完成

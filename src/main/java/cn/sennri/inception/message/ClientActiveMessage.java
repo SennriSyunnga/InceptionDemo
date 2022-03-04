@@ -4,6 +4,7 @@ package cn.sennri.inception.message;
  * 客户端发动消息
  */
 public class ClientActiveMessage implements Message{
+    @Override
     public Long getMessageId() {
         return messageId;
     }
@@ -28,11 +29,11 @@ public class ClientActiveMessage implements Message{
         this.effectNumber = effectNumber;
     }
 
-    public Integer[] getTargetPlayerNumber() {
+    public int[] getTargetPlayerNumber() {
         return targetPlayerNumber;
     }
 
-    public void setTargetPlayerNumber(Integer[] targetPlayerNumber) {
+    public void setTargetPlayerNumber(int[] targetPlayerNumber) {
         this.targetPlayerNumber = targetPlayerNumber;
     }
 
@@ -49,7 +50,7 @@ public class ClientActiveMessage implements Message{
     /**
      * 玩家对象序号
      */
-    Integer[] targetPlayerNumber;
+    int[] targetPlayerNumber;
 
     private String type = "ClientActiveMessage";
 

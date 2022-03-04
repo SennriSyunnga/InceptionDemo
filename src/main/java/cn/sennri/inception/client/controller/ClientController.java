@@ -45,15 +45,18 @@ public class ClientController {
 
     @ResponseBody
     @RequestMapping(value = "/login", method = RequestMethod.POST)
-    public void login(@RequestParam String name, @RequestParam String remoteAddr) {
+    public ResponseBodyImpl<Response> login(@RequestParam String name, @RequestParam String remoteAddr) throws InterruptedException {
         final String url = "ws://" + remoteAddr + ":" + PORT + "/socket/server";
         // 构建一个连接请求对象
         Request request = new Request.Builder().get().url(url).header("WEB_SOCKET_USERID", name).build();
+        final Listener<Response> responseListener = new Listener<>();
         this.webSocket = mClient.newWebSocket(request, new WebSocketListener() {
             @Override
             public void onOpen(WebSocket webSocket, Response response) {
                 super.onOpen(webSocket, response);
+                // 清理当前的链接池  如果断线重连会重新发request吗？
                 map.clear();
+                responseListener.setBlocking(response);
                 log.debug("连接到服务器{}成功。", remoteAddr);
             }
 
@@ -98,9 +101,16 @@ public class ClientController {
             @Override
             public void onFailure(WebSocket webSocket, Throwable throwable, Response response) {
                 super.onFailure(webSocket, throwable, response);
+                responseListener.setBlocking(response);
                 log.error("连接到服务器{}意外地失败了。", remoteAddr);
             }
         });
+        Response res = responseListener.getBlocking();
+        if (HttpStatus.SWITCHING_PROTOCOLS.value() == res.code()){
+            return ResponseBodyImpl.createNewResponse(res, HttpStatus.OK, "连接成功，已注册到服务器中");
+        }else{
+            return ResponseBodyImpl.createNewResponse(res, HttpStatus.CONFLICT);
+        }
         // 这里应该阻塞地等待当前open是否成功。
     }
 
@@ -132,7 +142,7 @@ public class ClientController {
 
     @ResponseBody
     @RequestMapping(value = "/test", method = RequestMethod.POST)
-    public ResponseBodyImpl active() throws JsonProcessingException {
+    public ResponseBodyImpl<?> active() throws JsonProcessingException {
         if (this.webSocket == null) {
             throw new IllegalStateException("未连接到服务器，请检查是否已登录");
         } else {
@@ -157,4 +167,5 @@ public class ClientController {
             }
         }
     }
+
 }

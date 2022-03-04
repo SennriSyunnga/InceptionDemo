@@ -1,8 +1,11 @@
 package cn.sennri.inception.config.socket;
 
-import cn.sennri.inception.message.ClientActiveMessage;
-import cn.sennri.inception.message.Message;
-import cn.sennri.inception.message.ServerAnswerActiveMessage;
+import cn.sennri.inception.Effect;
+import cn.sennri.inception.card.Card;
+import cn.sennri.inception.message.*;
+import cn.sennri.inception.model.listener.Listener;
+import cn.sennri.inception.player.Player;
+import cn.sennri.inception.server.Game;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +17,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -39,6 +43,11 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
      * 用户自定义标识 对应监听器从的key
      */
     private static final String USER_ID = "WEB_SOCKET_USERID";
+
+    /**
+     * 维护一个等待结果的消息map，根据MessageId取消息。
+     */
+    Map<Long, Listener<?>> map = new ConcurrentHashMap<>();
 
 
     static {
@@ -92,15 +101,36 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
         // 收到消息，自定义处理机制，实现业务
         logger.debug("服务器收到消息：{}", payload);
         Message m = objectMapper.readValue(payload , Message.class);
+        // 若该消息是效果发动消息
+        Player p = webSocketSessionPlayerMap.get(session);
         if (m instanceof ClientActiveMessage){
             ClientActiveMessage apply = (ClientActiveMessage) m;
-            Long id = apply.getMessageId();
             ServerAnswerActiveMessage r = new ServerAnswerActiveMessage();
+            Long id = apply.getMessageId();
             r.setMessageId(id);
-            r.setReply(true);
+            // 设置回复对象
+            r.setReplyId(m.getMessageId());
+            r.setReply(handleClientActiveMessage(session, game, apply));
             String s = objectMapper.writeValueAsString(r);
             session.sendMessage(new TextMessage(s));
+        }else if (m instanceof DrawMessage){
+            if (game.getPhase().equals(Game.Phase.DRAW_PHASE)){
+                game.draw(p);
+                // 开始应答
+            }
         }
+    }
+
+    Game game;
+
+    Map<WebSocketSession, Player> webSocketSessionPlayerMap = new ConcurrentHashMap<>();
+
+
+    boolean handleClientActiveMessage(WebSocketSession webSocketSession, Game game, ClientActiveMessage message){
+        // todo 应该分离发动对象和卡片拥有者，或者增加一个字段判断是不是发动共有卡片
+        Player p = webSocketSessionPlayerMap.get(webSocketSession);
+        Card card = p.getHandCards().get(message.getHandCardNumber());
+        return game.active(p, card, message.getEffectNumber(), message.getTargetPlayerNumber());
     }
 
     @Override
@@ -110,15 +140,12 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
         }
         exception.printStackTrace();
         logger.debug("传输出现异常，关闭websocket连接:");
-        //    String userId= (String) session.getAttributes().get(USER_ID);
-        //    users.remove(userId);
     }
 
     @Override
     public boolean supportsPartialMessages() {
         return false;
     }
-
 
     /**
      * 给某个用户发送消息

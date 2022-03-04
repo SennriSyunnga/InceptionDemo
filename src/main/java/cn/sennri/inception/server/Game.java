@@ -1,18 +1,15 @@
 package cn.sennri.inception.server;
 
 import cn.sennri.inception.Effect;
-import cn.sennri.inception.event.Event;
 import cn.sennri.inception.card.Card;
+import cn.sennri.inception.event.Event;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.field.DeckImpl;
 import cn.sennri.inception.model.listener.Listener;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.util.ListNode;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketSession;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.util.*;
 import java.util.concurrent.*;
@@ -34,10 +31,6 @@ public class Game {
      * 秘密所在层数
      */
     volatile int secret = 0;
-//    /**
-//     * 检测locks，若金库所在的层归零，则游戏返回true;
-//     */
-//    List<Integer> locks = new CopyOnWriteArrayList<>();
 
     /**
      * 检测locks，若金库所在的层归零，则游戏返回true;
@@ -129,15 +122,6 @@ public class Game {
         return messageNum.getAndUpdate(o -> o == Long.MAX_VALUE ? 0 : o + 1);
     }
 
-
-    private String sendChooseRoleMessage(WebSocketSession session) throws IOException, InterruptedException {
-        long id = getMessageNum();
-        session.sendMessage(new TextMessage(""));
-        Listener<String> listener = new Listener<>();
-        map.put(id, listener);
-        return listener.getBlocking();
-    }
-
     void setSecret(int secret) {
         this.secret = secret;
     }
@@ -145,6 +129,27 @@ public class Game {
     public void pushHostCard(InetAddress host) {
         // 异步抽选host卡发送给host
 
+    }
+
+    public void draw(Player p){
+        // 这里实现hook，添加游戏事件或者触发listener
+        p.draw(deck);
+    }
+
+    public boolean active(Player p, Card card, int num, int[] targets){
+        Effect e = card.getEffect(num);
+        if (e.isActivable(this)){
+            Player[] t = new Player[targets.length];
+            for (int i = 0;i < targets.length;i++){
+                t[i] = players[targets[i]];
+            }
+            e.setSourcePlayer(p);
+            e.setTargets(t);
+            effectChain.add(e);
+            return true;
+        }else{
+            return false;
+        }
     }
 
     List<String> roles;
@@ -155,6 +160,74 @@ public class Game {
 
     public void pushGuestCard(List<InetAddress> list) {
 
+    }
+
+    public Phase getPhase() {
+        return phase;
+    }
+
+    public ListNode<Player> getPointer() {
+        return pointer;
+    }
+
+    public int getSecret() {
+        return secret;
+    }
+
+    public int[] getLocks() {
+        return locks;
+    }
+
+    public Player getHost() {
+        return host;
+    }
+
+    public AtomicBoolean getGameResult() {
+        return gameResult;
+    }
+
+    public Player[] getPlayers() {
+        return players;
+    }
+
+    public GameStatusEnum getStatusEnum() {
+        return statusEnum;
+    }
+
+    public Map<Long, Listener<?>> getMap() {
+        return map;
+    }
+
+    public List<String> getRoles() {
+        return roles;
+    }
+
+    public ThreadPoolTaskExecutor getTaskExecutor() {
+        return taskExecutor;
+    }
+
+    public CyclicBarrier getAnswer() {
+        return answer;
+    }
+
+    public ListNode<Player> getAskedPlayer() {
+        return askedPlayer;
+    }
+
+    public ListNode<Player> getAskingPlayer() {
+        return askingPlayer;
+    }
+
+    public Map<Player, ListNode<Player>> getPlayerListNodeMap() {
+        return playerListNodeMap;
+    }
+
+    public List<Event> getEventList() {
+        return eventList;
+    }
+
+    public AtomicBoolean getIsAsking() {
+        return isAsking;
     }
 
     ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();

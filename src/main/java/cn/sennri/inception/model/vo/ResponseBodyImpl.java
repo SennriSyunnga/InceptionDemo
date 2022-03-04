@@ -14,9 +14,7 @@ public class ResponseBodyImpl<T> {
     private String msg;
 
     public static <T> ResponseBodyImpl<T> createNewResponse(T data, HttpStatus status) {
-        ResponseBodyImpl<T> responseBodyImpl = new ResponseBodyImpl<>();
-        responseBodyImpl.setCode(status.value());
-        responseBodyImpl.setMsg(status.getReasonPhrase());
+        ResponseBodyImpl<T> responseBodyImpl = createNewResponse(status);
         responseBodyImpl.setData(data);
         return responseBodyImpl;
     }
@@ -29,8 +27,7 @@ public class ResponseBodyImpl<T> {
     }
 
     public static <T> ResponseBodyImpl<T> createNewResponse(HttpStatus status, String selfDefinedMsg) {
-        ResponseBodyImpl<T> responseBodyImpl = new ResponseBodyImpl<>();
-        responseBodyImpl.setCode(status.value());
+        ResponseBodyImpl<T> responseBodyImpl = createNewResponse(status);
         responseBodyImpl.setMsg(selfDefinedMsg);
         return responseBodyImpl;
     }
@@ -44,7 +41,14 @@ public class ResponseBodyImpl<T> {
         return responseBodyImpl;
     }
 
-    public static ResponseBodyImpl error(String message, int code) {
+    public static <T> ResponseBodyImpl<T> createNewResponse(T data, HttpStatus status, String selfDefinedMsg) {
+        ResponseBodyImpl<T> response = createNewResponse(status, selfDefinedMsg);
+        response.setData(data);
+        return response;
+    }
+
+
+    public static ResponseBodyImpl<?> error(String message, int code) {
         return ResponseBodyImpl.builder().code(code).msg(message).build();
     }
 }

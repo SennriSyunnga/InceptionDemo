@@ -52,4 +52,24 @@ public abstract class AbcEffect implements Effect {
     public void refresh() {
         this.activeCount = 0;
     }
+
+    Player source;
+
+    /**
+     * 设置发动来源
+     * @return
+     */
+    @Override
+    public void setSourcePlayer(Player player){
+        this.source = player;
+    }
+
+    /**
+     * 默认返回卡牌持有者
+     * @return
+     */
+    @Override
+    public Player getSourcePlayer(){
+        return getEffectSource().getOwner();
+    }
 }

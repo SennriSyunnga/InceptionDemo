@@ -127,6 +127,8 @@ public class GameController {
     }
 
     /**
+     * 这里应该是在handle里处理的，接收到closing事件时检查是否直接终止游戏。
+     * 退出逻辑应该也在socket做实现
      * 某个用户退出房间
      * 设计上应该在等待阶段
      */

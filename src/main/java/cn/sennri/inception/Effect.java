@@ -36,11 +36,24 @@ public interface Effect {
         this.setTargets(targets);
     }
 
+
     /**
      * 获取效果来源卡片
      * @return
      */
     Card getEffectSource();
+
+    /**
+     * 卡牌发动者
+     * @return
+     */
+    void setSourcePlayer(Player player);
+
+    /**
+     * 卡帕发动者，通常是卡片效果来源
+     * @return
+     */
+    Player getSourcePlayer();
 
     /**
      * 执行启动效果

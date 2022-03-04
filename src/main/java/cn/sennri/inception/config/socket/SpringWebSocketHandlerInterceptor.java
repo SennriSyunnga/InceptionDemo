@@ -19,6 +19,7 @@ public class SpringWebSocketHandlerInterceptor extends HttpSessionHandshakeInter
                                    WebSocketHandler wsHandler,
                                    Map<String, Object> attributes) throws Exception {
         log.debug("Handshake is starting.");
+        // 这里可以实现拒绝重复登录或者登出前一链接的逻辑？
         return super.beforeHandshake(request, response, wsHandler, attributes);
     }
 

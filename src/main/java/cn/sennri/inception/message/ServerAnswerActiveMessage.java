@@ -3,30 +3,23 @@ package cn.sennri.inception.message;
 /**
  * 服务端答复消息
  */
-public class ServerAnswerActiveMessage implements Message{
-    /**
-     * 获取消息反序列化类型
-     * @return
-     */
-    private String type = "ServerAnswerActiveMessage";
-
+public class ServerAnswerActiveMessage extends AbstractReplyMessage<Boolean> implements Message{
     @Override
     public String getType() {
         return type;
     }
 
-    private Boolean reply;
-
+    @Override
     public Boolean getReply() {
         return reply;
     }
 
-    private Long messageId;
-
+    @Override
     public Long getMessageId() {
         return messageId;
     }
 
+    @Override
     public void setReply(Boolean reply) {
         this.reply = reply;
     }

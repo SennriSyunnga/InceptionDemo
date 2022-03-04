@@ -26,6 +26,8 @@ public class BasePlayer implements Player {
         return ready;
     }
 
+    public Role role = new BaseRole();
+
     /**
      * 存活或者死亡
      */
