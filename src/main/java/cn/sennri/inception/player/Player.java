@@ -32,9 +32,23 @@ public interface Player {
     /**
      * 复活
      */
-    void revive();
+    void awakenBy(Player player);
 
+    /**
+     * 复活一个对象
+     */
+    boolean revive(Player p, int[] num);
 
+    void setStatus(StatusEnum status);
+
+    void setPos(PositionEnum pos);
+
+    StatusEnum getStatus();
+
+    /**
+     * 这里可以设置自己抽到什么卡的回调。
+     * @param deck
+     */
     void draw(Deck deck);
 
     /**
@@ -43,16 +57,17 @@ public interface Player {
      */
     List<Card> getHandCards();
 
-
+    void commonDraw(Deck deck);
 
     InetAddress getInetAddress();
 
+    PositionEnum getPos();
 
-    /**
-     * 准备完成
-     * @return
-     */
-    AtomicBoolean isReady();
+    default void refresh(){}
+
+    default boolean canShoot(Player other) {
+        return this.getPos().equals(other.getPos());
+    }
 
     enum StatusEnum {
         /**
@@ -83,5 +98,17 @@ public interface Player {
         THREE,
         FOUR;
 
+        public PositionEnum toNext(){
+            switch (this){
+                case ONE:
+                    return TWO;
+                case TWO:
+                    return THREE;
+                case THREE:
+                    return FOUR;
+                default:
+                    return null;
+            }
+        }
     }
 }

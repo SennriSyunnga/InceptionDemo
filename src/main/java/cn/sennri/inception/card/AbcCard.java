@@ -7,9 +7,9 @@ import java.util.List;
 
 public abstract class AbcCard implements Card{
 
-    Player owner;
+    protected Player owner;
 
-    String description;
+    protected String description;
 
     protected List<Effect> effects;
 

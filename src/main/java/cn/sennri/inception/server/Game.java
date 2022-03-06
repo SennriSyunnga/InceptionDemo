@@ -19,48 +19,54 @@ import java.util.concurrent.atomic.AtomicLong;
 import static cn.sennri.inception.player.PlayerFactory.getNewPlayer;
 
 public class Game {
-    private final Deck deck = new DeckImpl();
+    protected final Deck deck = new DeckImpl();
     /**
      * 用来传递当前回合信息
      */
-    Phase phase;
+    protected Phase phase;
 
-    ListNode<Player> pointer;
+    protected ListNode<Player> pointer;
 
     /**
      * 秘密所在层数
      */
-    volatile int secret = 0;
+    protected volatile int secret = 0;
 
     /**
      * 检测locks，若金库所在的层归零，则游戏返回true;
      */
-    int[] locks = new int[4];
+    protected int[] locks = new int[4];
 
-    Player host;
+    protected Player host;
 
-    AtomicBoolean gameResult = null;
+    protected AtomicBoolean gameResult = null;
 
-    List<Effect> effectChain;
+    protected List<Effect> effectChain;
 
     public List<Effect> getEffectChain() {
         return this.effectChain;
     }
 
-    final Player[] players;
+    protected final Player[] players;
 
-    GameStatusEnum statusEnum;
+    protected GameStatusEnum statusEnum;
+
+    public Player getTurnOwner() {
+        return turnOwner;
+    }
 
     /**
      * 墓地列表
      */
-    List<Card> graveyard;
+    protected List<Card> graveyard;
     /**
      * 除外区列表
      */
-    List<Card> exclusionZone;
+    protected List<Card> exclusionZone;
 
     // Player里应该维护一个socket
+
+    protected Player turnOwner;
 
 
     public Game(List<InetAddress> list) {
@@ -110,9 +116,9 @@ public class Game {
     /**
      * 维护一个等待结果的消息map，根据MessageId取消息。
      */
-    Map<Long, Listener<?>> map = new ConcurrentHashMap<>();
+    protected Map<Long, Listener<?>> map = new ConcurrentHashMap<>();
 
-    AtomicLong messageNum = new AtomicLong(0);
+    protected AtomicLong messageNum = new AtomicLong(0);
 
     /**
      * 获取消息的版本号，如果到达long极限值，则清空至0L
@@ -122,7 +128,7 @@ public class Game {
         return messageNum.getAndUpdate(o -> o == Long.MAX_VALUE ? 0 : o + 1);
     }
 
-    void setSecret(int secret) {
+    public void setSecret(int secret) {
         this.secret = secret;
     }
 
@@ -131,9 +137,27 @@ public class Game {
 
     }
 
-    public void draw(Player p){
+    public boolean drawInDrawPhase(Player p){
         // 这里实现hook，添加游戏事件或者触发listener
-        p.draw(deck);
+        if (p.equals(turnOwner) && phase.equals(Phase.DRAW_PHASE)){
+            p.commonDraw(deck);
+            // 结算抽卡引发的次生效果，这里会进行一个ask;
+            takeAllEffects();
+            // 这里增加一个回合切换Event 要不抽象为效果
+            asking(turnOwner);
+            return true;
+        }else{
+            // 回绝
+            return false;
+        }
+    }
+
+    public boolean revive(Player source, int targetNum, int[] num){
+        Player target = players[targetNum];
+        if (target.getStatus().equals(Player.StatusEnum.ALIVE)){
+            return false;
+        }
+        return source.revive(target, num);
     }
 
     public boolean active(Player p, Card card, int num, int[] targets){
@@ -152,7 +176,36 @@ public class Game {
         }
     }
 
-    List<String> roles;
+    /**
+     * 这里负责加even
+     * @param p
+     * @param nums
+     */
+    public void discard(Player p, int[] nums){
+        Arrays.sort(nums);
+        List<Card> handCards = p.getHandCards();
+        for (int n : nums){
+            Card c = handCards.remove(n);
+            tempGraveyard.add(c);
+            graveyard.add(c);
+        }
+    }
+
+    public void endTurn(Player p){
+        if (this.turnOwner.equals(p) && this.phase.equals(Phase.USE_PHASE)){
+            this.phase = Phase.END_PHASE;
+            pushView();
+            // 结算效果
+            takeAllEffects();
+            pointer = pointer.next;
+            turnOwner = pointer.getNode();
+            this.phase = Phase.DRAW_PHASE;
+            pushView();
+        }
+    }
+
+
+    protected List<String> roles;
 
     public Deck getDeck() {
         return deck;
@@ -252,7 +305,7 @@ public class Game {
      * @param effectNum
      * @param target
      */
-    void active(String address, int playerNum, int cardNum, int effectNum, Player[] target) {
+    public void active(String address, int playerNum, int cardNum, int effectNum, Player[] target) {
         Player p = this.players[playerNum];
         // 校验是否为本人 其实也可以直接按地址校验，则无需playerNum
         if (p.getInetAddress().getHostAddress().equals(address)) {
@@ -274,7 +327,7 @@ public class Game {
      * asking主循环结束后可以执行
      * @param p
      */
-    void asking(Player p) {
+    public void asking(Player p) {
         // 改变指针指向
         askingPlayer = playerListNodeMap.get(p);
         // 若已经处于询问递归当中，说明此时这不是最外层的问询，则什么也不做。
@@ -304,16 +357,16 @@ public class Game {
     /**
      * 可重用
      */
-    CyclicBarrier answer = new CyclicBarrier(2);
+    public CyclicBarrier answer = new CyclicBarrier(2);
 
-    void waitAnswer() throws BrokenBarrierException, InterruptedException {
+    public void waitAnswer() throws BrokenBarrierException, InterruptedException {
         answer.await(); // 等待触发
     }
 
     /**
      * 若当前有阻塞的waitAnswer，则响应该Answer
      */
-    synchronized void answerIfAsking() {
+    public synchronized void answerIfAsking() {
         if (answer.getNumberWaiting() == 1) {
             try {
                 ListNode<Player> next = askedPlayer.next;
@@ -328,7 +381,7 @@ public class Game {
     /**
      * 当前用户放弃响应操作
      */
-    void pass() {
+    public void pass() {
         if (!isAsking.get()) {
             throw new IllegalStateException("当前并未进行询问");
         } else {
@@ -344,35 +397,39 @@ public class Game {
     /**
      * 具有响应权的玩家
      */
-    volatile ListNode<Player> askedPlayer;
+    protected volatile ListNode<Player> askedPlayer;
 
-    volatile ListNode<Player> askingPlayer;
+    protected volatile ListNode<Player> askingPlayer;
 
-    Map<Player, ListNode<Player>> playerListNodeMap = new HashMap<>();
+    protected Map<Player, ListNode<Player>> playerListNodeMap = new HashMap<>();
 
-    volatile List<Event> eventList;
+    protected volatile List<Event> eventList;
 
-    AtomicBoolean isAsking = new AtomicBoolean(false);
+    protected AtomicBoolean isAsking = new AtomicBoolean(false);
 
     // 不会同时执行多个以下方法
     // 不会在这个过程中有新的卡加入该卡池。
     // 该过程执行完一定会清空效果池
-    void takeAllEffects() {
+    protected void takeAllEffects() {
         while (!effectChain.isEmpty() || !tempGraveyard.isEmpty() || !eventList.isEmpty()) {
             int lastChainIndex = effectChain.size() - 1;
+            // 对象上锁
             synchronized (this){
+                // 若不为空
                 while (lastChainIndex > 0) {
                     Effect e = effectChain.remove(lastChainIndex);
+                    // 效果结算
                     e.takeEffect(this);
-                    // 多线程更新数据到客户端
+                    // 推送更新数据到客户端
                     pushView();
                     // event?
                     lastChainIndex--;
                 }
-                // 墓地效果起效
+                // 检查墓地效果起效 移形换影应该在这个时候结算
                 int tempGraveyardSize = tempGraveyard.size();
                 while (tempGraveyardSize > 0) {
                     Card c = tempGraveyard.remove(0);
+                    // 只当是时间风暴
                     if (c.isActivable(this)) {
                         c.getEffect(0).active(this, null);
                     }
@@ -390,12 +447,12 @@ public class Game {
     /**
      * 临时墓地区域
      */
-    List<Card> tempGraveyard = new CopyOnWriteArrayList<>();
+    protected List<Card> tempGraveyard = new CopyOnWriteArrayList<>();
 
     /**
      * 出牌区域
      */
-    List<Card> playArea;
+    protected List<Card> playArea;
 
 
     public List<Card> getTempGraveyard() {
@@ -414,7 +471,7 @@ public class Game {
         return exclusionZone;
     }
 
-    void decryptLock(int layerNum) {
+    public void decryptLock(int layerNum) {
         if (locks[layerNum] == 0) {
             throw new IllegalArgumentException("");
         } else {
@@ -443,7 +500,8 @@ public class Game {
         deck.shuffle();
         secret = 4;
         phase = Phase.DRAW_PHASE;
-
+        host = players[0];
+        turnOwner = host;
         //pointer 指针指向当前玩家
     }
 

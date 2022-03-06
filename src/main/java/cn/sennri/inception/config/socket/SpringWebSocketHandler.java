@@ -1,6 +1,5 @@
 package cn.sennri.inception.config.socket;
 
-import cn.sennri.inception.Effect;
 import cn.sennri.inception.card.Card;
 import cn.sennri.inception.message.*;
 import cn.sennri.inception.model.listener.Listener;
@@ -17,10 +16,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -115,9 +111,11 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
             session.sendMessage(new TextMessage(s));
         }else if (m instanceof DrawMessage){
             if (game.getPhase().equals(Game.Phase.DRAW_PHASE)){
-                game.draw(p);
-                // 开始应答
+                game.drawInDrawPhase(p);
             }
+        }else if(m instanceof ReviveMessage){
+            ReviveMessage reviveMessage = (ReviveMessage) m;
+            game.revive(p, reviveMessage.getTargetNum(), reviveMessage.getCostCardNum());
         }
     }
 

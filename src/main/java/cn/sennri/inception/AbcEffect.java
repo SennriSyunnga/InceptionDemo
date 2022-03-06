@@ -13,22 +13,22 @@ public abstract class AbcEffect implements Effect {
     /**
      * 效果的来源
      */
-    Card effectSource;
+    protected Card effectSource;
     /**
      * 卡片指定的效果对象
      */
-    Player[] targets;
+    protected Player[] targets;
     /**
      * 是否被康
      */
-    boolean deactivated;
+    protected boolean deactivated;
 
-    int maxCount;
+    protected int maxCount;
 
     /**
      * 回合已发动次数
      */
-    int activeCount;
+    protected int activeCount;
 
     @Override
     public Card getEffectSource() {
@@ -53,7 +53,7 @@ public abstract class AbcEffect implements Effect {
         this.activeCount = 0;
     }
 
-    Player source;
+    protected Player source;
 
     /**
      * 设置发动来源

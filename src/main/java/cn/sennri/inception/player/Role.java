@@ -27,15 +27,17 @@ public interface Role {
         return roll();
     }
 
+    void awakenBy(Player player);
+
     /**
-     * 复活他人
+     * 基本的复活复活他人的接口
      * @param p
      */
-    default void revive(Player p){
-        p.revive();
-    }
+    boolean revive(Player p, int[] num);
 
-    default void draw(List<Card> hands, Deck deck){
-        hands.add(deck.draw());
-    }
+    void commonDraw(Deck deck);
+
+    boolean discard(int[] num);
+
+    boolean canShoot(Player other);
 }

@@ -31,9 +31,11 @@ public interface Effect {
      * @param targets
      */
     default void active(Game game, Player[] targets) {
-        List<Effect> effectStack = game.getEffectChain();
-        effectStack.add(this);
-        this.setTargets(targets);
+        if (isActivable(game)){
+            List<Effect> effectStack = game.getEffectChain();
+            effectStack.add(this);
+            this.setTargets(targets);
+        }
     }
 
 

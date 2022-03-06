@@ -15,7 +15,7 @@ public interface Card {
      * 获取效果列表
      * @return
      */
-    List<Effect> getEffects();
+    List<? extends Effect> getEffects();
 
     /**
      * 获取效果列表
