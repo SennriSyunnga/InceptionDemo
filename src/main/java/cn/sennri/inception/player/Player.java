@@ -1,13 +1,13 @@
 package cn.sennri.inception.player;
 
 
+import cn.sennri.inception.Effect;
 import cn.sennri.inception.card.Card;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.util.Utils;
 
 import java.net.InetAddress;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  *
@@ -62,6 +62,11 @@ public interface Player {
     InetAddress getInetAddress();
 
     PositionEnum getPos();
+
+    default void active(Effect effect, Player[] targets){
+        effect.setSourcePlayer(this);
+        effect.setTargets(targets);
+    }
 
     default void refresh(){}
 

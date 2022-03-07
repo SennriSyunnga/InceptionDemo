@@ -1,14 +1,12 @@
 package cn.sennri.inception.player;
 
-import cn.sennri.inception.card.Card;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.util.Utils;
-
-import java.util.List;
 
 /**
  * 角色卡
  * draw行为应该下发到下面这个Role来代为实现。
+ * 这里应该定义一些永续效果，设置与记录回调等
  */
 public interface Role {
     /**
@@ -27,6 +25,10 @@ public interface Role {
         return roll();
     }
 
+    /**
+     * 被重生，在这里触发相应记录
+     * @param player
+     */
     void awakenBy(Player player);
 
     /**
@@ -35,9 +37,23 @@ public interface Role {
      */
     boolean revive(Player p, int[] num);
 
+    /**
+     * 抽牌阶段抽卡
+     * @param deck
+     */
     void commonDraw(Deck deck);
 
+    /**
+     * 弃牌
+     * @param num
+     * @return
+     */
     boolean discard(int[] num);
 
+    /**
+     * 判断是否可以攻击
+     * @param other
+     * @return
+     */
     boolean canShoot(Player other);
 }

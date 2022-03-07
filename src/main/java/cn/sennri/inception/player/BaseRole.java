@@ -9,12 +9,22 @@ import java.util.List;
 public class BaseRole implements Role{
     Player owner;
     Game game;
+    final int MAX_DECRYPT_TIME = 1;
+    int decrypt_time_this_turn = 0;
+
+    boolean canDecrypt(){
+        return decrypt_time_this_turn <MAX_DECRYPT_TIME;
+    }
+
+    public void decrypt(int layerNum){
+        this.game.decryptLock(layerNum);
+        decrypt_time_this_turn++;
+    }
 
     public BaseRole(Player owner, Game game){
        this.owner = owner;
        this.game = game;
     }
-
 
     @Override
     public void awakenBy(Player player) {

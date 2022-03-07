@@ -157,6 +157,9 @@ public class Game {
         if (target.getStatus().equals(Player.StatusEnum.ALIVE)){
             return false;
         }
+        if (turnOwner != source){
+            return false;
+        }
         return source.revive(target, num);
     }
 
@@ -167,8 +170,8 @@ public class Game {
             for (int i = 0;i < targets.length;i++){
                 t[i] = players[targets[i]];
             }
-            e.setSourcePlayer(p);
-            e.setTargets(t);
+            // card可能是无所属卡片，因此source和owner不一定一致
+            p.active(e, t);
             effectChain.add(e);
             return true;
         }else{

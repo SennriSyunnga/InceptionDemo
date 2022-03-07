@@ -1,6 +1,5 @@
 package cn.sennri.inception.card;
 
-
 import cn.sennri.inception.Effect;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
@@ -15,7 +14,7 @@ public interface Card {
      * 获取效果列表
      * @return
      */
-    List<? extends Effect> getEffects();
+    List<Effect> getEffects();
 
     /**
      * 获取效果列表

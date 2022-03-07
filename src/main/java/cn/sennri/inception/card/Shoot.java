@@ -4,13 +4,13 @@ import cn.sennri.inception.AbcEffect;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class Shoot extends AbcCard implements IShoot{
 
     public Shoot(){
-        this.effects = Arrays.asList(new Effect(this));
+        this.effects = Collections.singletonList(new Effect(this));
     }
 
     /**
@@ -18,17 +18,7 @@ public class Shoot extends AbcCard implements IShoot{
      * @return
      */
     @Override
-    public List<Effect> getEffects() {
-        return null;
-    }
-
-    /**
-     * 获取效果列表
-     * @return
-     * @param num
-     */
-    @Override
-    public Effect getEffect(int num) {
+    public List<cn.sennri.inception.Effect> getEffects() {
         return null;
     }
 

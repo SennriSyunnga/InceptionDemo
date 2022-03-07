@@ -13,6 +13,8 @@ public abstract class AbcCard implements Card{
 
     protected List<Effect> effects;
 
+    public AbcCard(){};
+
     @Override
     public Player getOwner() {
         return owner;
@@ -23,6 +25,11 @@ public abstract class AbcCard implements Card{
         Player originalOwner = owner;
         this.owner = newOwner;
         return originalOwner;
+    }
+
+    @Override
+    public List<Effect> getEffects(){
+        return this.effects;
     }
 
     @Override
