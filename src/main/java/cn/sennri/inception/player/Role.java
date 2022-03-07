@@ -56,4 +56,9 @@ public interface Role {
      * @return
      */
     boolean canShoot(Player other);
+
+    /**
+     * 重置回合信息
+     */
+    void refresh();
 }

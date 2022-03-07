@@ -7,23 +7,31 @@ import cn.sennri.inception.server.Game;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Sennri
  */
 public class BasePlayer implements Player {
 
-    public AtomicInteger defaultDrawTime = new AtomicInteger(1);
-
     public Role role;
 
     public Game game;
 
-    public BasePlayer(Game game, InetAddress inetAddress){
+    /**
+     * webSocketId标识
+     */
+    public String uid;
+
+    /**
+     * 用户昵称
+     */
+    public String name;
+
+    public BasePlayer(Game game, String uid , String nickName){
         this.game = game;
+        this.name = nickName;
+        this.uid = uid;
         this.role = new BaseRole(this, game);
-        this.inetAddress = inetAddress;
     }
 
     /**
@@ -43,14 +51,9 @@ public class BasePlayer implements Player {
      */
     public PositionEnum pos;
 
-    final public int decryptTimes = 1;
-
-    public final InetAddress inetAddress;
-
     public BasePlayer(InetAddress inetAddress){
         this.status = StatusEnum.ALIVE;
         this.hands = new ArrayList<>();
-        this.inetAddress = inetAddress;
         this.pos = PositionEnum.ONE;
     }
 
@@ -73,12 +76,6 @@ public class BasePlayer implements Player {
         return this.role.discard(cardNum);
     }
 
-
-    @Override
-    public InetAddress getInetAddress() {
-        return this.inetAddress;
-    }
-
     @Override
     public void awakenBy(Player player){
         this.role.awakenBy(player);
@@ -89,8 +86,14 @@ public class BasePlayer implements Player {
         return role.revive(p,  num);
     }
 
+    @Override
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    @Override
+    public Role getRole() {
+        return role;
     }
 
     @Override
@@ -131,11 +134,11 @@ public class BasePlayer implements Player {
             return false;
         }
         BasePlayer that = (BasePlayer) o;
-        return getInetAddress().equals(that.getInetAddress());
+        return uid.equals(that.uid);
     }
 
     @Override
     public int hashCode() {
-        return getInetAddress().hashCode();
+        return uid.hashCode();
     }
 }

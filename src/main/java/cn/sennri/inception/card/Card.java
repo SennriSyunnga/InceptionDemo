@@ -45,6 +45,11 @@ public interface Card {
      */
     Effect activeEffect(int num, Player[] targets);
 
+    /**
+     * 仅仅是客户端级别的校验
+     * @param game
+     * @return
+     */
     default boolean isActivable(Game game){
         for (Effect e:this.getEffects()){
             if (e.isActivable(game)){

@@ -4,40 +4,32 @@ import cn.sennri.inception.card.Card;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
 
-import java.util.List;
-
 /**
  * 效果接口
  * @author Sennri
  */
 public interface Effect {
     /**
-     * 效果是否可以发动
+     * 在客户端角度看效果是否可以发动
      * @param game
      * @return
      */
     boolean isActivable(Game game);
 
     /**
+     * 服务端层面的校验, 检查对象是否合法。
+     * @param game
+     * @return
+     */
+    default boolean isActivationLegal(Game game, Player source, Player[] targets){
+        return isActivable(game);
+    }
+
+    /**
      * 设置效果对象
      * @param targets
      */
     void setTargets(Player[] targets);
-
-    /**
-     * 响应对方的动作，这时候需要指定对象、
-     * 可能会被重写。例如，有些卡的效果发动时是在墓地的
-     * @param game
-     * @param targets
-     */
-    default void active(Game game, Player[] targets) {
-        if (isActivable(game)){
-            List<Effect> effectStack = game.getEffectChain();
-            effectStack.add(this);
-            this.setTargets(targets);
-        }
-    }
-
 
     /**
      * 获取效果来源卡片

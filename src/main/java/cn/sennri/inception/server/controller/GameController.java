@@ -1,6 +1,5 @@
 package cn.sennri.inception.server.controller;
 
-import cn.sennri.inception.card.Card;
 import cn.sennri.inception.player.BasePlayer;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
@@ -103,14 +102,6 @@ public class GameController {
                     lobbyBusy.set(false);
                 }
             });
-        }
-    }
-
-    void active(String address, int playerNum, int cardNum){
-        Player p = this.playerList.get(playerNum);
-        if (p.getInetAddress().getHostAddress().equals(address)){
-            List<Card> handCards = p.getHandCards();
-
         }
     }
 

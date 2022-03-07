@@ -20,7 +20,7 @@ public class HostPlayer extends BasePlayer{
     }
 
     /**
-     * 使得骰子结果减少1
+     * 使得骰子结果减少1, 该结果不通过role实现
      * @return
      */
     @Override
@@ -28,6 +28,12 @@ public class HostPlayer extends BasePlayer{
         return Math.max(super.rollShootResult() - 1, 1);
     }
 
+    /**
+     * 无条件复活
+     * @param p
+     * @param num
+     * @return
+     */
     @Override
     public boolean revive(Player p, int[] num) {
         if (p.equals(this)){

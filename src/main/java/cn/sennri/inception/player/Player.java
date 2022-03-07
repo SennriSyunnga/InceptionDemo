@@ -59,8 +59,6 @@ public interface Player {
 
     void commonDraw(Deck deck);
 
-    InetAddress getInetAddress();
-
     PositionEnum getPos();
 
     default void active(Effect effect, Player[] targets){
@@ -68,7 +66,15 @@ public interface Player {
         effect.setTargets(targets);
     }
 
-    default void refresh(){}
+    default void setRole(Role role){
+
+    }
+
+    default void refreshItsRole(){
+        this.getRole().refresh();
+    }
+
+    default Role getRole(){return null;}
 
     default boolean canShoot(Player other) {
         return this.getPos().equals(other.getPos());

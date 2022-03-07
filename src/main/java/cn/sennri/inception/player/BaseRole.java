@@ -7,18 +7,22 @@ import cn.sennri.inception.server.Game;
 import java.util.List;
 
 public class BaseRole implements Role{
-    Player owner;
-    Game game;
-    final int MAX_DECRYPT_TIME = 1;
-    int decrypt_time_this_turn = 0;
+    /**
+     * 角色拥有者
+     * 用于移形换影switch角色卡
+     */
+    protected Player owner;
+    protected Game game;
+    protected final int MAX_DECRYPT_TIME = 1;
+    protected int decryptTimeThisTurn = 0;
 
     boolean canDecrypt(){
-        return decrypt_time_this_turn <MAX_DECRYPT_TIME;
+        return decryptTimeThisTurn <MAX_DECRYPT_TIME;
     }
 
     public void decrypt(int layerNum){
         this.game.decryptLock(layerNum);
-        decrypt_time_this_turn++;
+        decryptTimeThisTurn++;
     }
 
     public BaseRole(Player owner, Game game){
@@ -77,6 +81,11 @@ public class BaseRole implements Role{
     @Override
     public boolean canShoot(Player other) {
         return owner.getPos().equals(other.getPos());
+    }
+
+    @Override
+    public void refresh() {
+        decryptTimeThisTurn = 0;
     }
 
 }

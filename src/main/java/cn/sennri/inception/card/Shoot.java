@@ -38,17 +38,19 @@ public class Shoot extends AbcCard implements IShoot{
         public boolean isActivable(Game game) {
             // 这名字可能不太正确 todo
             Player cardOwner = this.getSourcePlayer();
-            return game.getTurnOwner().equals(cardOwner) &&
-                    game.getPhase().equals(Game.Phase.USE_PHASE);
-        }
-
-        @Override
-        public void active(Game game, Player[] targets) {
-            Player owner = this.source;
-            Player target = this.targets[0];
-            if (owner.canShoot(target)){
-                super.active(game, targets);
+            if (!game.getTurnOwner().equals(cardOwner)){
+                return false;
             }
+            if (!game.getPhase().equals(Game.Phase.USE_PHASE)){
+                return false;
+            }
+            // 有一个能射就能发动
+            for (Player p : game.getPlayers()){
+                if (source.canShoot(p)){
+                    return true;
+                }
+            }
+            return false;
         }
 
         @Override
