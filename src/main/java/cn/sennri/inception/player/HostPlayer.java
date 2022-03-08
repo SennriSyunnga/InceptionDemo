@@ -11,9 +11,6 @@ import java.net.InetAddress;
  * @Created by Sennri
  */
 public class HostPlayer extends BasePlayer{
-    public HostPlayer(Game game, InetAddress inetAddress) {
-        super(game, inetAddress);
-    }
 
     public HostPlayer(InetAddress inetAddress) {
         super(inetAddress);

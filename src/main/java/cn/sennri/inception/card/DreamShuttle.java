@@ -1,20 +1,18 @@
 package cn.sennri.inception.card;
 
 import cn.sennri.inception.AbcEffect;
-import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
 
 import java.util.Arrays;
 
-public class Shuttle extends AbcCard {
-    public Shuttle() {
-        this.effects = Arrays.asList(new GoUpEffect(this), new GoDownEffect(this));
+public class DreamShuttle extends AbcCard {
+    public DreamShuttle() {
+        this.effects = Arrays.asList(new MoveUpEffect(this), new GoDownEffect(this));
     }
 
+    public static class MoveUpEffect extends AbcEffect {
 
-    public static class GoUpEffect extends AbcEffect {
-
-        public GoUpEffect(Card effectSource) {
+        public MoveUpEffect(Card effectSource) {
             super(effectSource);
         }
 
@@ -25,13 +23,7 @@ public class Shuttle extends AbcCard {
          */
         @Override
         public boolean isActivable(Game game) {
-            Player source = this.source;
-            Player.PositionEnum pos =  source.getPos();
-            if (pos == Player.PositionEnum.ZERO || pos == Player.PositionEnum.FOUR){
-                return false;
-            }else{
-                return true;
-            }
+            return source.getPos().canGoUp();
         }
 
         /**
@@ -41,7 +33,6 @@ public class Shuttle extends AbcCard {
          */
         @Override
         public void takeEffect(Game game) {
-            Player source = this.source;
             // 这里要考虑到是否在连锁中死亡的情况吗？算了吧，不要。
             source.setPos(source.getPos().toNext());
         }
@@ -60,7 +51,7 @@ public class Shuttle extends AbcCard {
          */
         @Override
         public boolean isActivable(Game game) {
-            return false;
+            return source.getPos().canGoDown();
         }
 
         /**
@@ -70,7 +61,7 @@ public class Shuttle extends AbcCard {
          */
         @Override
         public void takeEffect(Game game) {
-
+            source.setPos(source.getPos().toPre());
         }
     }
 

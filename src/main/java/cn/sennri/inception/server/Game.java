@@ -69,6 +69,7 @@ public class Game {
 
 
     public Game(List<InetAddress> list) {
+        // 抽取梦主
         Collections.shuffle(list);
         Deck deck = new DeckImpl();
         deck.shuffle();
@@ -190,6 +191,10 @@ public class Game {
         }
     }
 
+    /**
+     * 结束回合
+     * @param p
+     */
     public void endTurn(Player p){
         if (this.turnOwner.equals(p) && this.phase.equals(Phase.USE_PHASE)){
             this.phase = Phase.END_PHASE;
@@ -204,84 +209,21 @@ public class Game {
         }
     }
 
+    public void deckAbandonCard(int times){
+        for (int i = 0;i < times;i++){
+            deck.abandon(graveyard, tempGraveyard);
+        }
+    }
+
+    public void vanish(Card card, List<Card> from){
+        from.remove(card);
+        exclusionZone.add(card);
+    }
+
 
     protected List<String> roles;
 
-    public Deck getDeck() {
-        return deck;
-    }
 
-    public void pushGuestCard(List<InetAddress> list) {
-
-    }
-
-    public Phase getPhase() {
-        return phase;
-    }
-
-    public ListNode<Player> getPointer() {
-        return pointer;
-    }
-
-    public int getSecret() {
-        return secret;
-    }
-
-    public int[] getLocks() {
-        return locks;
-    }
-
-    public Player getHost() {
-        return host;
-    }
-
-    public AtomicBoolean getGameResult() {
-        return gameResult;
-    }
-
-    public Player[] getPlayers() {
-        return players;
-    }
-
-    public GameStatusEnum getStatusEnum() {
-        return statusEnum;
-    }
-
-    public Map<Long, Listener<?>> getMap() {
-        return map;
-    }
-
-    public List<String> getRoles() {
-        return roles;
-    }
-
-    public ThreadPoolTaskExecutor getTaskExecutor() {
-        return taskExecutor;
-    }
-
-    public CyclicBarrier getAnswer() {
-        return answer;
-    }
-
-    public ListNode<Player> getAskedPlayer() {
-        return askedPlayer;
-    }
-
-    public ListNode<Player> getAskingPlayer() {
-        return askingPlayer;
-    }
-
-    public Map<Player, ListNode<Player>> getPlayerListNodeMap() {
-        return playerListNodeMap;
-    }
-
-    public List<Event> getEventList() {
-        return eventList;
-    }
-
-    public AtomicBoolean getIsAsking() {
-        return isAsking;
-    }
 
     ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
 
@@ -557,6 +499,78 @@ public class Game {
     // 若当前玩家不发动效果，则检查当前玩家是否为上轮发动的玩家
     // 若相同则结束循环，开始pop效果，依次处理。
     // 每次循环结束时询问指针向后移动
+
+    public Phase getPhase() {
+        return phase;
+    }
+
+    public ListNode<Player> getPointer() {
+        return pointer;
+    }
+
+    public int getSecret() {
+        return secret;
+    }
+
+    public int[] getLocks() {
+        return locks;
+    }
+
+    public Player getHost() {
+        return host;
+    }
+
+    public AtomicBoolean getGameResult() {
+        return gameResult;
+    }
+
+    public Player[] getPlayers() {
+        return players;
+    }
+
+    public GameStatusEnum getStatusEnum() {
+        return statusEnum;
+    }
+
+    public Map<Long, Listener<?>> getMap() {
+        return map;
+    }
+
+    public List<String> getRoles() {
+        return roles;
+    }
+
+    public ThreadPoolTaskExecutor getTaskExecutor() {
+        return taskExecutor;
+    }
+
+    public CyclicBarrier getAnswer() {
+        return answer;
+    }
+
+    public ListNode<Player> getAskedPlayer() {
+        return askedPlayer;
+    }
+
+    public ListNode<Player> getAskingPlayer() {
+        return askingPlayer;
+    }
+
+    public Map<Player, ListNode<Player>> getPlayerListNodeMap() {
+        return playerListNodeMap;
+    }
+
+    public List<Event> getEventList() {
+        return eventList;
+    }
+
+    public AtomicBoolean getIsAsking() {
+        return isAsking;
+    }
+
+    public Deck getDeck() {
+        return deck;
+    }
 
     public enum GameStatusEnum {
         WAITING,

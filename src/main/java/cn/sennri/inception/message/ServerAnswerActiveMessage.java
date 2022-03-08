@@ -23,8 +23,4 @@ public class ServerAnswerActiveMessage extends AbstractReplyMessage<Boolean> imp
     public void setReply(Boolean reply) {
         this.reply = reply;
     }
-
-    public void setMessageId(Long messageId) {
-        this.messageId = messageId;
-    }
 }

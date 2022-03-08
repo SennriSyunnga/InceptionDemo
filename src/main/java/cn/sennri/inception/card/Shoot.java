@@ -24,7 +24,7 @@ public class Shoot extends AbcCard implements IShoot{
 
     @Override
     public boolean isActivable(Game game) {
-        return false;
+        return effects.get(0).isActivable(game);
     }
 
 

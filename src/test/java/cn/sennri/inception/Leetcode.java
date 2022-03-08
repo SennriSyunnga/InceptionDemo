@@ -13,15 +13,25 @@ public class Leetcode {
             this.type = this.getClass().getSimpleName();
             log.debug(type);
         }
+
+        public A newInstance() throws InstantiationException {
+            try {
+                return this.getClass().newInstance();
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
     }
 
     public static class B extends A{
-
     }
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, InstantiationException {
         B b = new B();
         A bb = new B();
+        A bbb = b.newInstance();
+        return;
     }
 
 

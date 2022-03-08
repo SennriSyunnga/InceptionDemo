@@ -2,6 +2,7 @@ package cn.sennri.inception;
 
 import cn.sennri.inception.card.Card;
 import cn.sennri.inception.player.Player;
+import cn.sennri.inception.server.Game;
 
 /**
  * @Classname AbcEffect
@@ -21,7 +22,7 @@ public abstract class AbcEffect implements Effect {
     /**
      * 是否被康
      */
-    protected boolean deactivated;
+    protected boolean deactivated = false;
 
     protected int maxCount;
 
@@ -45,15 +46,32 @@ public abstract class AbcEffect implements Effect {
         this.targets = targets;
     }
 
-    protected AbcEffect(Card effectSource) {
+    public AbcEffect(Card effectSource) {
         this.effectSource = effectSource;
     }
 
     public void refresh() {
         this.activeCount = 0;
+        this.deactivated = false;
     }
 
     protected Player source;
+
+    /**
+     * 默认实现
+     * @param game
+     * @return
+     */
+    @Override
+    public boolean isActivable(Game game) {
+        if(this.getEffectSource().getOwner()!= game.getTurnOwner()){
+            return false;
+        }
+        if(game.getPhase()!= Game.Phase.USE_PHASE){
+            return false;
+        }
+        return true;
+    }
 
     /**
      * 设置发动来源
@@ -71,5 +89,11 @@ public abstract class AbcEffect implements Effect {
     @Override
     public Player getSourcePlayer(){
         return getEffectSource().getOwner();
+    }
+
+
+    @Override
+    public void setDeactivated() {
+        this.deactivated = true;
     }
 }

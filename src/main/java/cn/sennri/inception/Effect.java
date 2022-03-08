@@ -62,4 +62,9 @@ public interface Effect {
      * @return
      */
     boolean isDeactivated();
+
+    /**
+     * 无效化
+     */
+    void setDeactivated();
 }

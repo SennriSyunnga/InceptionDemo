@@ -1,30 +1,17 @@
 package cn.sennri.inception.card;
 
 import cn.sennri.inception.AbcEffect;
-import cn.sennri.inception.Effect;
-import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.server.Game;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
  * 时间风暴
  */
 public class TimeStorm extends AbcCard {
-
-    @Override
-    public List<Effect> getEffects() {
-        return null;
-    }
-
-    @Override
-    public Effect getEffect(int num) {
-        return null;
-    }
-
-    @Override
-    public boolean isActivable(Game game) {
-        return false;
+    public TimeStorm(){
+        this.effects = Arrays.asList(new DiscardEffect(this));
     }
 
     public static class DiscardEffect extends AbcEffect{
@@ -44,6 +31,13 @@ public class TimeStorm extends AbcCard {
          */
         @Override
         public boolean isActivable(Game game) {
+            if (super.isActivable(game)){
+                return true;
+            }
+            List<Card> tempGraveyard = game.getTempGraveyard();
+            if (tempGraveyard.contains(this.effectSource)){
+                return true;
+            }
             return false;
         }
 
@@ -54,12 +48,8 @@ public class TimeStorm extends AbcCard {
          */
         @Override
         public void takeEffect(Game game) {
-            List<Card> tempGraveyard = game.getTempGraveyard();
-            List<Card> graveyard = game.getGraveyard();
-            Deck deck = game.getDeck();
-            for (int i = 0;i < 10;i++){
-                deck.abandon(graveyard, tempGraveyard);
-            }
+            game.deckAbandonCard(10);
+            game.vanish(this.effectSource, game.getTempGraveyard());
         }
     }
 }

@@ -103,10 +103,25 @@ public interface Player {
     }
 
     enum PositionEnum {
+        /**
+         * 迷失层
+         */
         ZERO,
+        /**
+         * 1
+         */
         ONE,
+        /**
+         * 2
+         */
         TWO,
+        /**
+         * 3
+         */
         THREE,
+        /**
+         * 4
+         */
         FOUR;
 
         public PositionEnum toNext(){
@@ -117,6 +132,27 @@ public interface Player {
                     return THREE;
                 case THREE:
                     return FOUR;
+                default:
+                    return null;
+            }
+        }
+
+        public boolean canGoUp(){
+            return this != Player.PositionEnum.ZERO && this != Player.PositionEnum.FOUR;
+        }
+
+        public boolean canGoDown(){
+            return this != Player.PositionEnum.ZERO && this != Player.PositionEnum.ONE;
+        }
+
+        public PositionEnum toPre(){
+            switch (this){
+                case TWO:
+                    return ONE;
+                case THREE:
+                    return TWO;
+                case FOUR:
+                    return THREE;
                 default:
                     return null;
             }
