@@ -5,12 +5,27 @@ import cn.sennri.inception.Effect;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
 
+import java.util.Arrays;
 import java.util.List;
 
-public class Decrypt extends AbcCard{
+public class Decrypt extends AbcCard {
+    public Decrypt() {
+        this.effects = Arrays.asList(new DecryptEffect(this), new AntiDecryptEffect(this));
+    }
+
     public static class DecryptEffect extends AbcEffect {
         public DecryptEffect(Card effectSource) {
             super(effectSource);
+        }
+
+        @Override
+        public boolean isActivable(Game game) {
+            if (!super.isActivable(game)){
+                return false;
+            }else{
+                Player sourcePlayer = this.getSourcePlayer();
+                return sourcePlayer.getRole().canDecrypt();
+            }
         }
 
         /**
@@ -32,17 +47,17 @@ public class Decrypt extends AbcCard{
 
         @Override
         public boolean isActivable(Game game) {
-            if (!game.getIsAsking().get()){
+            if (!game.getIsAsking().get()) {
                 return false;
             }
             Player askedPlayer = game.getAskedPlayer().getNode();
-            if (askedPlayer != this.effectSource.getOwner()){
+            if (askedPlayer != this.effectSource.getOwner()) {
                 return false;
             }
             List<Effect> effectChain = game.getEffectChain();
 
             int size = effectChain.size();
-            if(size == 0){
+            if (size == 0) {
                 return false;
             }
             Effect lastEffect = effectChain.get(size - 1);

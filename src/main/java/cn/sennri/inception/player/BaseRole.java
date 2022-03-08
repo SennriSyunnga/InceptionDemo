@@ -17,8 +17,14 @@ public class BaseRole implements Role{
     protected final int MAX_DECRYPT_TIME = 1;
     protected int decryptTimeThisTurn = 0;
 
-    boolean canDecrypt(){
-        return decryptTimeThisTurn <MAX_DECRYPT_TIME;
+    @Override
+    public boolean canDecrypt(){
+        // 所在层数无法解锁
+        if (game.getLocks()[this.owner.getPos().getLayerNum()] == 0){
+            return false;
+        }
+        // 还有解锁次数
+        return decryptTimeThisTurn < MAX_DECRYPT_TIME;
     }
 
     @Override

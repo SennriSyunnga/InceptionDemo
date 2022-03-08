@@ -66,4 +66,10 @@ public interface Role {
      * 成功解封
      */
     void decrypted();
+
+    /**
+     * 是否有办法使用解锁
+     * @return
+     */
+    boolean canDecrypt();
 }

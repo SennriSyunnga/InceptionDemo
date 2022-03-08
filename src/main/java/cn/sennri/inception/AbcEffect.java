@@ -65,7 +65,7 @@ public abstract class AbcEffect implements Effect {
     protected Player source;
 
     /**
-     * 默认实现
+     * 默认实现，验证是否为回合玩家及到了出牌阶段
      * @param game
      * @return
      */

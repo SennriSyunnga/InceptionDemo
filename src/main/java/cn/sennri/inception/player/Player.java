@@ -104,23 +104,33 @@ public interface Player {
         /**
          * 迷失层
          */
-        ZERO,
+        ZERO(0),
         /**
          * 1
          */
-        ONE,
+        ONE(1),
         /**
          * 2
          */
-        TWO,
+        TWO(2),
         /**
          * 3
          */
-        THREE,
+        THREE(3),
         /**
          * 4
          */
-        FOUR;
+        FOUR(4);
+
+        final int layerNum;
+
+        PositionEnum(int num){
+            this.layerNum = num;
+        }
+
+        public int getLayerNum() {
+            return layerNum;
+        }
 
         public PositionEnum toNext(){
             switch (this){
