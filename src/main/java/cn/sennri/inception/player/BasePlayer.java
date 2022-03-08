@@ -1,5 +1,6 @@
 package cn.sennri.inception.player;
 
+import cn.sennri.inception.Effect;
 import cn.sennri.inception.card.Card;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.server.Game;
@@ -118,6 +119,12 @@ public class BasePlayer implements Player {
     @Override
     public PositionEnum getPos() {
         return this.pos;
+    }
+
+    @Override
+    public void active(Effect effect, int[] targets) {
+        effect.setSourcePlayer(this);
+        effect.setTargets(targets);
     }
 
     @Override

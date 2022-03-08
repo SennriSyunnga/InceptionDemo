@@ -18,7 +18,12 @@ public abstract class AbcEffect implements Effect {
     /**
      * 卡片指定的效果对象
      */
-    protected Player[] targets;
+    protected Player[] targetPlayers;
+
+    /**
+     * 卡片指定的效果对象
+     */
+    protected int[] targets;
     /**
      * 是否被康
      */
@@ -42,9 +47,11 @@ public abstract class AbcEffect implements Effect {
     }
 
     @Override
-    public void setTargets(Player[] targets) {
+    public void setTargets(int[] targets) {
         this.targets = targets;
     }
+
+    //void setTargets(Player[] targets);
 
     public AbcEffect(Card effectSource) {
         this.effectSource = effectSource;
@@ -64,10 +71,10 @@ public abstract class AbcEffect implements Effect {
      */
     @Override
     public boolean isActivable(Game game) {
-        if(this.getEffectSource().getOwner()!= game.getTurnOwner()){
+        if (this.getEffectSource().getOwner() != game.getTurnOwner()) {
             return false;
         }
-        if(game.getPhase()!= Game.Phase.USE_PHASE){
+        if (game.getPhase() != Game.Phase.USE_PHASE) {
             return false;
         }
         return true;
@@ -78,7 +85,7 @@ public abstract class AbcEffect implements Effect {
      * @return
      */
     @Override
-    public void setSourcePlayer(Player player){
+    public void setSourcePlayer(Player player) {
         this.source = player;
     }
 
@@ -87,7 +94,7 @@ public abstract class AbcEffect implements Effect {
      * @return
      */
     @Override
-    public Player getSourcePlayer(){
+    public Player getSourcePlayer() {
         return getEffectSource().getOwner();
     }
 

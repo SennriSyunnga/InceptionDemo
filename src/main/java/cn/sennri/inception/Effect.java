@@ -10,6 +10,12 @@ import cn.sennri.inception.server.Game;
  */
 public interface Effect {
     /**
+     * 设置效果对象 不能确定对象是玩家或者卡片
+     * @param targets
+     */
+    void setTargets(int[] targets);
+
+    /**
      * 在客户端角度看效果是否可以发动
      * @param game
      * @return
@@ -19,17 +25,13 @@ public interface Effect {
     /**
      * 服务端层面的校验, 检查对象是否合法。
      * @param game
+     * @param game
+     * @param game
      * @return
      */
-    default boolean isActivationLegal(Game game, Player source, Player[] targets){
+    default boolean isActivationLegal(Game game, Player source, int[] targets){
         return isActivable(game);
     }
-
-    /**
-     * 设置效果对象
-     * @param targets
-     */
-    void setTargets(Player[] targets);
 
     /**
      * 获取效果来源卡片

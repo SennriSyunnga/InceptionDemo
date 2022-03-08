@@ -20,8 +20,8 @@ public class BaseRole implements Role{
         return decryptTimeThisTurn <MAX_DECRYPT_TIME;
     }
 
-    public void decrypt(int layerNum){
-        this.game.decryptLock(layerNum);
+    @Override
+    public void decrypted(){
         decryptTimeThisTurn++;
     }
 

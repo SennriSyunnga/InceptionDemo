@@ -61,4 +61,9 @@ public interface Role {
      * 重置回合信息
      */
     void refresh();
+
+    /**
+     * 成功解封
+     */
+    void decrypted();
 }

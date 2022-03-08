@@ -6,7 +6,6 @@ import cn.sennri.inception.card.Card;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.util.Utils;
 
-import java.net.InetAddress;
 import java.util.List;
 
 /**
@@ -61,11 +60,6 @@ public interface Player {
 
     PositionEnum getPos();
 
-    default void active(Effect effect, Player[] targets){
-        effect.setSourcePlayer(this);
-        effect.setTargets(targets);
-    }
-
     default void setRole(Role role){
 
     }
@@ -75,6 +69,8 @@ public interface Player {
     }
 
     default Role getRole(){return null;}
+
+    void active(Effect effect, int[] targets);
 
     default boolean canShoot(Player other) {
         return this.getPos().equals(other.getPos());

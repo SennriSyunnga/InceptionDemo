@@ -148,7 +148,7 @@ public class Game {
     }
 
     /**
-     *
+     *  todo 不一定存在效果对象
      * @param source 效果来源
      * @param card 发动卡片
      * @param num   效果序号
@@ -157,13 +157,9 @@ public class Game {
      */
     public boolean active(Player source, Card card, int num, int[] targets){
         Effect e = card.getEffect(num);
-        Player[] t = new Player[targets.length];
-        for (int i = 0;i < targets.length;i++){
-            t[i] = players[targets[i]];
-        }
-        if (e.isActivationLegal(this, source, t)){
+        if (e.isActivationLegal(this, source, targets)){
             // card可能是无所属卡片，因此source和owner不一定一致
-            source.active(e, t);
+            source.active(e, targets);
             effectChain.add(e);
             return true;
         }else{

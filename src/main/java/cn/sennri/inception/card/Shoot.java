@@ -55,9 +55,8 @@ public class Shoot extends AbcCard implements IShoot{
 
         @Override
         public void takeEffect(Game game) {
-            Player owner = this.source;
-            int ans = owner.rollShootResult();
-            Player target = this.targets[0];
+            int ans = this.source.rollShootResult();
+            Player target = game.getPlayers()[targets[0]];
             if (ans < 2){
                 target.setStatus(Player.StatusEnum.LOST);
             }else if (ans < 5){

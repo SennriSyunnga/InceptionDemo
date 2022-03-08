@@ -20,8 +20,8 @@ public class Decrypt extends AbcCard{
          */
         @Override
         public void takeEffect(Game game) {
-            // 这里有问题
-            game.decryptLock(0);
+            game.decryptLock(this.targets[0]);
+            this.getSourcePlayer().getRole().decrypted();
         }
     }
 
@@ -56,7 +56,9 @@ public class Decrypt extends AbcCard{
          */
         @Override
         public void takeEffect(Game game) {
-            //todo
+            List<Effect> effectChain = game.getEffectChain();
+            // 禁用解封
+            effectChain.get(targets[0]).setDeactivated();
         }
     }
 }
