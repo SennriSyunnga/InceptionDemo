@@ -1,8 +1,7 @@
 package cn.sennri.inception.player;
 
 import cn.sennri.inception.server.Game;
-
-import java.net.InetAddress;
+import org.springframework.web.socket.WebSocketSession;
 
 /**
  * @Classname HostPlayer
@@ -11,9 +10,8 @@ import java.net.InetAddress;
  * @Created by Sennri
  */
 public class HostPlayer extends BasePlayer{
-
-    public HostPlayer(InetAddress inetAddress) {
-        super(inetAddress);
+    public HostPlayer(Game game, WebSocketSession socketSession, String name) {
+        super(game, socketSession, name);
     }
 
     /**

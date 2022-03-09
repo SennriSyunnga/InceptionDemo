@@ -40,6 +40,24 @@ public class ListNode<T> {
             temp.pre = node;
             node = temp;
         }
+        node.next = head;
+        head.pre = node;
+        return head;
+    }
+
+    @SafeVarargs
+    public static <T> ListNode<T> connect(T ... nodes){
+        ListNode<T> head = new ListNode<>(nodes[0]);
+        ListNode<T> listNode = head;
+        for (int i = 1, nodesLength = nodes.length; i < nodesLength; i++) {
+            T n = nodes[i];
+            ListNode<T> temp = new ListNode<>(n);
+            listNode.next = temp;
+            temp.pre = listNode;
+            listNode = temp;
+        }
+        listNode.next = head;
+        head.pre = listNode;
         return head;
     }
 

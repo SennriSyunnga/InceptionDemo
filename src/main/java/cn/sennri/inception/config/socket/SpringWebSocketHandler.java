@@ -5,6 +5,7 @@ import cn.sennri.inception.message.*;
 import cn.sennri.inception.model.listener.Listener;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
+import cn.sennri.inception.server.GameFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -25,8 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class SpringWebSocketHandler extends TextWebSocketHandler {
 
     @Autowired
-    ObjectMapper objectMapper;
-
+    public ObjectMapper objectMapper;
 
     private static final Logger logger = LoggerFactory.getLogger(SpringWebSocketHandler.class);
 
@@ -37,7 +37,7 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
 
     private static final Map<WebSocketSession, String> sessionToUserMap;
 
-//    private static final Set<WebSocketSession> sessionToReadyMap;
+    private static final Set<WebSocketSession> readySessionSet;
 
     /**
      * 用户自定义标识 对应监听器从的key
@@ -57,14 +57,15 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
     /**
      * 大厅处于激活状态,默认处于关闭装填
      */
-    private AtomicBoolean lobbyCreated = new AtomicBoolean(false);
+    private final AtomicBoolean lobbyCreated = new AtomicBoolean(false);
 
-    private AtomicBoolean isPlaying = new AtomicBoolean(false);
+    private final AtomicBoolean isPlaying = new AtomicBoolean(false);
 
 
     static {
         usersToSessionMap = new ConcurrentHashMap<>();
         sessionToUserMap = new ConcurrentHashMap<>();
+        readySessionSet = ConcurrentHashMap.newKeySet();
     }
 
     public SpringWebSocketHandler() {
@@ -111,7 +112,6 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
      */
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) throws Exception {
-
         Optional.ofNullable(session.getHandshakeHeaders().get(USER_ID)).ifPresent(o -> {
             String name = sessionToUserMap.remove(session);
             usersToSessionMap.remove(name);
@@ -154,7 +154,11 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
         if (m instanceof StartGameMessage){
             if (session == hostSocket){
                 // check 准备状态
-
+                int readyPlayerNumber = readySessionSet.size();
+                // 测试阶段最小玩家人数为2;
+                if(readyPlayerNumber >= 2 && readyPlayerNumber == webSocketSessionPlayerMap.size()){
+                    this.game = GameFactory.getGameInstance(sessionToUserMap);
+                }
             }
         }
         if (m instanceof ClientActiveMessage){

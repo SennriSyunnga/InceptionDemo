@@ -4,6 +4,7 @@ import cn.sennri.inception.Effect;
 import cn.sennri.inception.card.Card;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.server.Game;
+import org.springframework.web.socket.WebSocketSession;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -28,11 +29,15 @@ public class BasePlayer implements Player {
      */
     public String name;
 
-    public BasePlayer(Game game, String uid , String nickName){
+    public BasePlayer(Game game, WebSocketSession socketSession, String name){
+        this.name = name;
         this.game = game;
-        this.name = nickName;
-        this.uid = uid;
+        this.socketSession  = socketSession;
+        this.status = StatusEnum.ALIVE;
+        this.hands = new ArrayList<>();
+        this.pos = PositionEnum.ONE;
         this.role = new BaseRole(this, game);
+        this.uid = socketSession.getId();
     }
 
     /**
@@ -52,11 +57,7 @@ public class BasePlayer implements Player {
      */
     public PositionEnum pos;
 
-    public BasePlayer(InetAddress inetAddress){
-        this.status = StatusEnum.ALIVE;
-        this.hands = new ArrayList<>();
-        this.pos = PositionEnum.ONE;
-    }
+    protected WebSocketSession socketSession;
 
     @Override
     public List<Card> getHandCards() {

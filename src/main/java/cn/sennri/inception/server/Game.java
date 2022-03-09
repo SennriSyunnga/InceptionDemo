@@ -6,19 +6,21 @@ import cn.sennri.inception.event.Event;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.field.DeckImpl;
 import cn.sennri.inception.model.listener.Listener;
+import cn.sennri.inception.player.BasePlayer;
+import cn.sennri.inception.player.HostPlayer;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.player.Role;
 import cn.sennri.inception.util.ListNode;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.web.socket.WebSocketSession;
 
-import java.net.InetAddress;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class Game {
-    protected final Deck deck = new DeckImpl();
+    protected Deck deck = new DeckImpl();
     /**
      * 用来传递当前回合信息
      */
@@ -67,24 +69,28 @@ public class Game {
 
     protected Player turnOwner;
 
-
-    public Game(List<InetAddress> list) {
+    public Game(Map<WebSocketSession, String> sessionToUserMap) {
         // 抽取梦主
+        List<Map.Entry<WebSocketSession, String>> list = new ArrayList<>(sessionToUserMap.entrySet());
         Collections.shuffle(list);
-        Deck deck = new DeckImpl();
-        deck.shuffle();
-        secret = 4;
-        phase = Phase.DRAW_PHASE;
         int playerSize = list.size();
-        players = new Player[playerSize];
-        host = players[0];
-        turnOwner = host;
+        this.players = new Player[playerSize];
+        Map.Entry<WebSocketSession, String> hostEntry = list.get(0);
+        this.host = new HostPlayer(this, hostEntry.getKey(), hostEntry.getValue());
+        players[0] = host;
+        for(int i = 1;i < playerSize;i++){
+            Map.Entry<WebSocketSession, String> entry = list.get(i);
+            players[i] = new BasePlayer(this, entry.getKey(), entry.getValue());
+        }
+
+        this.pointer = ListNode.connect(players);
+        this.turnOwner = host;
+        this.secret = 4;
+        this.phase = Phase.DRAW_PHASE;
         initialize();
     }
 
     public void initialize() {
-        // 根据人数 处理list，形成游戏布局
-
         // 有环对象随机抽取梦主
         // future 异步等待选择结果
         // future.get() 获取角色选择信息
