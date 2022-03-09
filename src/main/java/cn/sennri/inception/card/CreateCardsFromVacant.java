@@ -13,9 +13,9 @@ import java.util.List;
  */
 public class CreateCardsFromVacant extends AbcCard{
 
-    CreateCardsFromVacant(){
+    public CreateCardsFromVacant(){
         super();
-        super.effects = Collections.singletonList(new Effect(this));
+        super.effects = Collections.singletonList(new DrawEffect(this));
     }
 
     /**
@@ -43,14 +43,8 @@ public class CreateCardsFromVacant extends AbcCard{
     /**
      *
      */
-    public final static class Effect extends AbcEffect {
-
-        @Override
-        public boolean isActivable(Game game) {
-            return true;
-        }
-
-        public Effect(Card effectSource) {
+    public final static class DrawEffect extends AbcEffect {
+        public DrawEffect(Card effectSource) {
             super(effectSource);
         }
 

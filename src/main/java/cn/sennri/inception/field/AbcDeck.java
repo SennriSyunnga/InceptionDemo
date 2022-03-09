@@ -3,12 +3,21 @@ package cn.sennri.inception.field;
 import cn.sennri.inception.card.Card;
 import cn.sennri.inception.server.GameFinishedListener;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 
 public abstract class AbcDeck implements Deck{
 
-    List<GameFinishedListener> gameFinishedListeners;
+    protected Card[] uidToCard;
+
+    protected List<GameFinishedListener> gameFinishedListeners;
+
+    AbcDeck(){
+        gameFinishedListeners = new ArrayList<>();
+    }
+
 
     /**
      * 没有具体实现，请在实现类里头进行赋值
@@ -35,6 +44,11 @@ public abstract class AbcDeck implements Deck{
     }
 
     @Override
+    public void shuffle() {
+        Collections.shuffle(deck);
+    }
+
+    @Override
     public void abandon(List<Card> graveyard, List<Card> tempGraveyard) {
         Card c = remove();
         tempGraveyard.add(c);
@@ -58,5 +72,10 @@ public abstract class AbcDeck implements Deck{
         }
         topIndexPointer--;
         return c;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return this.deck.isEmpty();
     }
 }

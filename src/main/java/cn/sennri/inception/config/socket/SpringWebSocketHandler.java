@@ -5,6 +5,7 @@ import cn.sennri.inception.message.*;
 import cn.sennri.inception.model.listener.Listener;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +19,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 public class SpringWebSocketHandler extends TextWebSocketHandler {
@@ -35,6 +37,8 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
 
     private static final Map<WebSocketSession, String> sessionToUserMap;
 
+//    private static final Set<WebSocketSession> sessionToReadyMap;
+
     /**
      * 用户自定义标识 对应监听器从的key
      */
@@ -44,6 +48,18 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
      * 维护一个等待结果的消息map，根据MessageId取消息。
      */
     Map<Long, Listener<?>> map = new ConcurrentHashMap<>();
+
+    /**
+     * 指向本机的socket，大厅创建时保留该引用
+     */
+    private WebSocketSession hostSocket;
+
+    /**
+     * 大厅处于激活状态,默认处于关闭装填
+     */
+    private AtomicBoolean lobbyCreated = new AtomicBoolean(false);
+
+    private AtomicBoolean isPlaying = new AtomicBoolean(false);
 
 
     static {
@@ -59,6 +75,23 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
      */
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
+
+        if (Objects.requireNonNull(session.getRemoteAddress()).equals(session.getLocalAddress())){
+            this.hostSocket = session;
+            logger.info("用户为本机用户，正在创建大厅。");
+            lobbyCreated.set(true);
+        }else{
+            // 若大厅未建立，则拒绝非本机的连接
+            if (!lobbyCreated.get()){
+                try {
+                    sendMessage(session, new ErrorMessage("当前主机未建立大厅"));
+                    session.close(CloseStatus.POLICY_VIOLATION);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                return;
+            }
+        }
         InetAddress inetAddress = Optional.ofNullable(session.getRemoteAddress()).orElseThrow(NullPointerException::new).getAddress();
         logger.debug("WebSocket成功建立与{}的连接!", inetAddress);
         // 若非空，则携带信息，当前为测试，因此不强制要求携带信息；
@@ -70,6 +103,7 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
             logger.debug("将{}登记为用户{}", inetAddress, name);
         });
         logger.info("当前线上用户数量:{}", sessionToUserMap.size());
+
     }
 
     /**
@@ -85,6 +119,24 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
         });
         logger.debug("关闭web socket连接;\n" +
                 "剩余在线用户{}",usersToSessionMap.size());
+
+        if (lobbyCreated.get()){
+            if (session.equals(hostSocket)){
+                logger.info("大厅房主已经退出链接，正在关闭大厅。");
+                lobbyCreated.set(false);
+            }
+        }
+    }
+
+
+    /**
+     * 向特定的socket发送消息
+     * @param session
+     * @param selfDefineMessage
+     * @throws IOException
+     */
+    public void sendMessage(WebSocketSession session, Message selfDefineMessage) throws IOException {
+        session.sendMessage(new TextMessage(this.objectMapper.writeValueAsString(selfDefineMessage)));
     }
 
     /**
@@ -99,6 +151,12 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
         Message m = objectMapper.readValue(payload , Message.class);
         // 若该消息是效果发动消息
         Player p = webSocketSessionPlayerMap.get(session);
+        if (m instanceof StartGameMessage){
+            if (session == hostSocket){
+                // check 准备状态
+
+            }
+        }
         if (m instanceof ClientActiveMessage){
             ClientActiveMessage apply = (ClientActiveMessage) m;
             ServerAnswerActiveMessage r = new ServerAnswerActiveMessage();
@@ -137,7 +195,7 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
             session.close();
         }
         exception.printStackTrace();
-        logger.debug("传输出现异常，关闭websocket连接:");
+        logger.error("传输出现异常，关闭websocket连接:");
     }
 
     @Override

@@ -64,6 +64,8 @@ public interface Player {
 
     }
 
+    boolean discard(int[] target);
+
     default void refreshItsRole(){
         this.getRole().refresh();
     }

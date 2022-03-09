@@ -84,7 +84,6 @@ public class Game {
 
     public void initialize() {
         // 根据人数 处理list，形成游戏布局
-        roles = new CopyOnWriteArrayList<>();
 
         // 有环对象随机抽取梦主
         // future 异步等待选择结果
@@ -106,7 +105,7 @@ public class Game {
      * 获取消息的版本号，如果到达long极限值，则清空至0L
      * @return
      */
-    private long getMessageNum(){
+    private long getMessageNum() {
         return messageNum.getAndUpdate(o -> o == Long.MAX_VALUE ? 0 : o + 1);
     }
 
@@ -114,16 +113,16 @@ public class Game {
         this.secret = secret;
     }
 
-    public boolean drawInDrawPhase(Player p){
+    public boolean drawInDrawPhase(Player p) {
         // 这里实现hook，添加游戏事件或者触发listener
-        if (p.equals(turnOwner) && phase.equals(Phase.DRAW_PHASE)){
+        if (p.equals(turnOwner) && phase.equals(Phase.DRAW_PHASE)) {
             p.commonDraw(deck);
             // 结算抽卡引发的次生效果，这里会进行一个ask;
             takeAllEffects();
             // 这里增加一个回合切换Event 要不抽象为效果
             asking(turnOwner);
             return true;
-        }else{
+        } else {
             // 回绝
             return false;
         }
@@ -136,12 +135,12 @@ public class Game {
      * @param num
      * @return
      */
-    public boolean revive(Player source, int targetNum, int[] num){
+    public boolean revive(Player source, int targetNum, int[] num) {
         Player target = players[targetNum];
-        if (target.getStatus().equals(Player.StatusEnum.ALIVE)){
+        if (target.getStatus().equals(Player.StatusEnum.ALIVE)) {
             return false;
         }
-        if (turnOwner != source){
+        if (turnOwner != source) {
             return false;
         }
         return source.revive(target, num);
@@ -155,32 +154,33 @@ public class Game {
      * @param targets   效果对象序号
      * @return
      */
-    public boolean active(Player source, Card card, int num, int[] targets){
+    public boolean active(Player source, Card card, int num, int[] targets) {
         Effect e = card.getEffect(num);
-        if (e.isActivationLegal(this, source, targets)){
+        if (e.isActivationLegal(this, source, targets)) {
             // card可能是无所属卡片，因此source和owner不一定一致
             source.active(e, targets);
             effectChain.add(e);
             return true;
-        }else{
+        } else {
             return false;
         }
     }
 
-    private void active(Effect e){
+    private void active(Effect e) {
         effectChain.add(e);
     }
 
 
     /**
+     * nums的顺序在Role的discard里做实现
      * 这里负责加even
      * @param p
      * @param nums
      */
-    public void discard(Player p, int[] nums){
-        Arrays.sort(nums);
+    public void discard(Player p, int[] nums) {
         List<Card> handCards = p.getHandCards();
-        for (int n : nums){
+        // 在这里加入event
+        for (int n : nums) {
             Card c = handCards.remove(n);
             tempGraveyard.add(c);
             graveyard.add(c);
@@ -188,38 +188,52 @@ public class Game {
     }
 
     /**
-     * 结束回合
-     * @param p
+     * 结束回合 若该操作失败，则回卷
+     * @param player
+     * @param discardNum 丢弃的卡牌在手卡中的编号
      */
-    public void endTurn(Player p){
-        if (this.turnOwner.equals(p) && this.phase.equals(Phase.USE_PHASE)){
+    public boolean endTurn(Player player, int[] discardNum) {
+        if (this.turnOwner.equals(player) && this.phase.equals(Phase.USE_PHASE)) {
+            int disNum = discardNum.length;
+            int size = player.getHandCards().size();
+            // 验证弃牌数量是否正确
+            if (size - disNum > 5) {
+                return false;
+            }
+            // 判断是否要弃牌
+            if (size > 5) {
+                boolean success = player.discard(discardNum);
+                if (!success) {
+                    return false;
+                }
+            }
+            // 进入结束阶段
             this.phase = Phase.END_PHASE;
             pushView();
-            // 结算效果
+            // 结算效果 比如移形换影在这时候结算
             takeAllEffects();
+
             turnOwner.refreshItsRole();
             pointer = pointer.next;
             turnOwner = pointer.getNode();
             this.phase = Phase.DRAW_PHASE;
             pushView();
+            return true;
+        } else {
+            return false;
         }
     }
 
-    public void deckAbandonCard(int times){
-        for (int i = 0;i < times;i++){
+    public void deckAbandonCard(int times) {
+        for (int i = 0; i < times; i++) {
             deck.abandon(graveyard, tempGraveyard);
         }
     }
 
-    public void vanish(Card card, List<Card> from){
+    public void vanish(Card card, List<Card> from) {
         from.remove(card);
         exclusionZone.add(card);
     }
-
-
-    protected List<String> roles;
-
-
 
     ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
 
@@ -325,7 +339,7 @@ public class Game {
         while (!effectChain.isEmpty() || !tempGraveyard.isEmpty() || !eventList.isEmpty()) {
             int lastChainIndex = effectChain.size() - 1;
             // 对象上锁
-            synchronized (this){
+            synchronized (this) {
                 // 若不为空
                 while (lastChainIndex > 0) {
                     Effect e = effectChain.remove(lastChainIndex);
@@ -388,10 +402,10 @@ public class Game {
      * @param there
      * @return
      */
-    public boolean switchRole(Player here, Player there){
-        if (there == host){
+    public boolean switchRole(Player here, Player there) {
+        if (there == host) {
             return false;
-        }else{
+        } else {
             // 这里的实现不完全正确;但是由于host角色不存在非回合方的效果，shoot行为不使用role实现，回合外效果主要通过场地卡来执行，因此暂且保留这个实现。
             Role r = here.getRole();
             here.setRole(there.getRole());
@@ -530,10 +544,6 @@ public class Game {
 
     public Map<Long, Listener<?>> getMap() {
         return map;
-    }
-
-    public List<String> getRoles() {
-        return roles;
     }
 
     public ThreadPoolTaskExecutor getTaskExecutor() {

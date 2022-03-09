@@ -73,7 +73,8 @@ public class BasePlayer implements Player {
         this.role.commonDraw(deck);
     }
 
-    boolean discard(int[] cardNum){
+    @Override
+    public boolean discard(int[] cardNum){
         return this.role.discard(cardNum);
     }
 

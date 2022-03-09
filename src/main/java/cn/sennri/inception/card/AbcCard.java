@@ -7,6 +7,18 @@ import java.util.List;
 
 public abstract class AbcCard implements Card{
 
+    protected int uid;
+
+    @Override
+    public void setUid(int uid) {
+        this.uid = uid;
+    }
+
+    @Override
+    public int getUid() {
+        return uid;
+    }
+
     protected Player owner;
 
     protected String description;

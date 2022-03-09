@@ -4,6 +4,7 @@ import cn.sennri.inception.card.Card;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.server.Game;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class BaseRole implements Role{
@@ -71,8 +72,15 @@ public class BaseRole implements Role{
     public boolean discard(int[] nums) {
         List<Card> handCards = this.owner.getHandCards();
         if (nums.length > handCards.size()){
+            // 弃牌数量不能大于手牌总数
             return false;
         }else{
+            // 排序
+            Arrays.sort(nums);
+            if (nums[nums.length - 1] >= handCards.size()){
+                // 弃牌序号不能超过剩余手牌最大序号
+                return false;
+            }
             game.discard(owner, nums);
             return true;
         }

@@ -24,6 +24,10 @@ public interface Card {
         return getEffects().get(num);
     }
 
+    void setUid(int uid);
+
+    int getUid();
+
     /**
      * 获取卡的所属，若未抽取，则卡片归属为null
      * @return
