@@ -1,7 +1,6 @@
 package cn.sennri.inception.player;
 
 import cn.sennri.inception.card.Card;
-import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.server.Game;
 
 import java.util.Arrays;
@@ -67,11 +66,18 @@ public class BaseRole implements Role{
         return true;
     }
 
+    /**
+     * 计划上应该Player的draw调用这个，使得draw能够被Role感知到，并且能执行对应效果，例如抽到xx并展示，然后可以多抽一张。
+     */
+    public void draw(){
+        Card card = game.getDeck().draw();
+        // can do sth here;
+        this.owner.getHandCards().add(card);
+    }
+
     @Override
-    public void commonDraw(Deck deck) {
-        for (int i = 0; i < 2;i++){
-            this.owner.draw(deck);
-        }
+    public void commonDraw() {
+        game.drawDeck(this.owner, 2);
     }
 
     @Override

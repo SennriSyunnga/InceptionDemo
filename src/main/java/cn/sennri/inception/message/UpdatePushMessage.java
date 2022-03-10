@@ -14,6 +14,8 @@ import java.util.List;
  * 这些原子性的指令。
  */
 public interface UpdatePushMessage extends Message{
+    void setEventList(List<Event> eventList);
+
     @NotEmpty
     List<Event> getEventList();
 

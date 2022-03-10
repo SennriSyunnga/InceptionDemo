@@ -1,11 +1,15 @@
 package cn.sennri.inception.field;
 
 import cn.sennri.inception.card.Card;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface Deck {
+    // todo getType
+
+
     /**
      * 返回卡组大小
      * @return

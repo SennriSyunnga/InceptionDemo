@@ -50,6 +50,10 @@ public interface Player {
      */
     void draw(Deck deck);
 
+    Integer getOrder();
+
+    void setOrder(Integer order);
+
     String getName();
 
     /**
@@ -58,7 +62,7 @@ public interface Player {
      */
     List<Card> getHandCards();
 
-    void commonDraw(Deck deck);
+    void commonDraw();
 
     PositionEnum getPos();
 
@@ -88,6 +92,11 @@ public interface Player {
 
     default Role getRole(){return null;}
 
+    /**
+     * 发动效果并指定对象
+     * @param effect
+     * @param targets
+     */
     void active(Effect effect, int[] targets);
 
     /**

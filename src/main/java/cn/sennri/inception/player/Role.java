@@ -1,6 +1,5 @@
 package cn.sennri.inception.player;
 
-import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.util.Utils;
 
 /**
@@ -39,9 +38,8 @@ public interface Role {
 
     /**
      * 抽牌阶段抽卡
-     * @param deck
      */
-    void commonDraw(Deck deck);
+    void commonDraw();
 
     /**
      * 弃牌

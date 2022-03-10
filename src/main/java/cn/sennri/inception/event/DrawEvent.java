@@ -1,6 +1,6 @@
 package cn.sennri.inception.event;
 
-public class DrawEvent {
+public class DrawEvent extends AbstractEvent implements Event{
     /**
      * 抽卡量
      */

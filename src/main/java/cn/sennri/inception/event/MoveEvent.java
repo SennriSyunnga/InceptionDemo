@@ -1,6 +1,6 @@
 package cn.sennri.inception.event;
 
-public class MoveEvent {
+public class MoveEvent extends AbstractEvent {
     Integer subject;
     Boolean up;
 

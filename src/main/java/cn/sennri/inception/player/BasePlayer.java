@@ -6,7 +6,6 @@ import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.server.Game;
 import org.springframework.web.socket.WebSocketSession;
 
-import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,6 +17,18 @@ public class BasePlayer implements Player {
     public Role role;
 
     public Game game;
+
+    public Integer order;
+
+    @Override
+    public Integer getOrder() {
+        return order;
+    }
+
+    @Override
+    public void setOrder(Integer order) {
+        this.order = order;
+    }
 
     /**
      * webSocketId标识
@@ -75,8 +86,8 @@ public class BasePlayer implements Player {
     }
 
     @Override
-    public void commonDraw(Deck deck) {
-        this.role.commonDraw(deck);
+    public void commonDraw() {
+        this.role.commonDraw();
     }
 
     @Override

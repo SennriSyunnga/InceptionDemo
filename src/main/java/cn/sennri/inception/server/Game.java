@@ -4,10 +4,11 @@ import cn.sennri.inception.Effect;
 import cn.sennri.inception.card.Card;
 import cn.sennri.inception.client.view.FieldView;
 import cn.sennri.inception.config.socket.SpringWebSocketHandler;
-import cn.sennri.inception.event.Event;
+import cn.sennri.inception.event.*;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.field.DeckImpl;
 import cn.sennri.inception.message.UpdatePushMessage;
+import cn.sennri.inception.message.UpdatePushMessageImpl;
 import cn.sennri.inception.model.listener.Listener;
 import cn.sennri.inception.player.BasePlayer;
 import cn.sennri.inception.player.HostPlayer;
@@ -68,8 +69,6 @@ public class Game {
      */
     protected List<Card> exclusionZone;
 
-    // Player里应该维护一个socket
-
     /**
      * 当前回合玩家
      */
@@ -94,10 +93,10 @@ public class Game {
         Map.Entry<WebSocketSession, String> hostEntry = list.get(0);
         WebSocketSession hostSession = hostEntry.getKey();
         this.host = new HostPlayer(this, hostSession, hostEntry.getValue());
-        webSocketSessionPlayerMap.put(hostSession ,host);
+        webSocketSessionPlayerMap.put(hostSession, host);
         // 0位固定为梦主
         players[0] = host;
-        for(int i = 1;i < playerSize;i++){
+        for (int i = 1; i < playerSize; i++) {
             Map.Entry<WebSocketSession, String> entry = list.get(i);
             WebSocketSession session = entry.getKey();
             Player player = new BasePlayer(this, session, entry.getValue());
@@ -117,13 +116,7 @@ public class Game {
      *
      */
     public void initializeRole() {
-        // 有环对象随机抽取梦主
-        // future 异步等待选择结果
-        // future.get() 获取角色选择信息
-        // 随机构成环
-        // 这里应该替换成根据当前人数来从Factory获取对应的deckImpl
-
-        //pointer 指针指向当前玩家
+        // 在这里sendRole信息给客户端，并等待应答
     }
 
     /**
@@ -148,7 +141,9 @@ public class Game {
     public boolean drawInDrawPhase(Player p) {
         // 这里实现hook，添加游戏事件或者触发listener
         if (p.equals(turnOwner) && phase.equals(Phase.DRAW_PHASE)) {
-            p.commonDraw(deck);
+            p.commonDraw();
+            // 结算行为
+            pushUnUpdateMessage();
             // 结算抽卡引发的次生效果，这里会进行一个ask;
             takeAllEffects();
             // 这里增加一个回合切换Event 要不抽象为效果
@@ -159,6 +154,15 @@ public class Game {
             return false;
         }
     }
+
+    public void drawDeck(Player player, int drawTimes) {
+        for (int i = 0;i < drawTimes;i++){
+            player.draw(deck);
+        }
+        DrawEvent drawEvent = new DrawEvent();
+        unPushEvenList.add(drawEvent);
+    }
+
 
     /**
      * 游戏复活接口
@@ -178,8 +182,11 @@ public class Game {
         return source.revive(target, num);
     }
 
+
+    List<Event> unPushEvenList = new ArrayList<>();
+
     /**
-     *  todo 不一定存在效果对象
+     * 发动效果接口
      * @param source 效果来源
      * @param card 发动卡片
      * @param num   效果序号
@@ -192,6 +199,17 @@ public class Game {
             // card可能是无所属卡片，因此source和owner不一定一致
             source.active(e, targets);
             effectChain.add(e);
+
+            ActiveEvent activeEvent = new ActiveEvent();
+            activeEvent.setCardUid(card.getUid());
+            activeEvent.setObject(targets);
+            activeEvent.setSubject(source.getOrder());
+            activeEvent.setHandCardEffect(card.getOwner() != null);
+            unPushEvenList.add(activeEvent);
+            pushUnUpdateMessage();
+
+            // 开始处于发问状态，此时会将游戏状态置为isAsking，从而拒绝其他不合法的操作
+            asking(source);
             return true;
         } else {
             return false;
@@ -220,36 +238,59 @@ public class Game {
     }
 
     /**
-     * 结束回合 若该操作失败，则回卷
+     * 结束回合 若该操作失败，则不执行该end操作并返回false;
      * @param player
      * @param discardNum 丢弃的卡牌在手卡中的编号
      */
     public boolean endTurn(Player player, int[] discardNum) {
         if (this.turnOwner.equals(player) && this.phase.equals(Phase.USE_PHASE)) {
             int disNum = discardNum.length;
-            int size = player.getHandCards().size();
+            List<Card> handCards = player.getHandCards();
+            int size = handCards.size();
             // 验证弃牌数量是否正确
             if (size - disNum > 5) {
                 return false;
             }
-            // 判断是否要弃牌
+            // 判断是否要弃牌，不弃牌则不读参数
             if (size > 5) {
                 boolean success = player.discard(discardNum);
                 if (!success) {
                     return false;
+                } else {
+                    DiscardEvent event = new DiscardEvent();
+                    event.setSubject(player.getOrder());
+                    int[] cardIds = new int[discardNum.length];
+                    for (int i = 0; i < discardNum.length; i++) {
+                        cardIds[i] = handCards.get(discardNum[i]).getUid();
+                    }
+                    event.setCardIds(cardIds);
+                    unPushEvenList.add(event);
                 }
             }
             // 进入结束阶段
             this.phase = Phase.END_PHASE;
-            pushUpdateMessage();
+            // 添加到 队列 最前面
+            PhaseEndEvent endEvent = new PhaseEndEvent();
+            // 服务端的evenList不关心顺序，只关心历史
+            eventList.add(endEvent);
+            unPushEvenList.add(0, endEvent);
+            pushUnUpdateMessage();
+
+            // 这里应该从hook里找出要在结束阶段才能发动的效果，然后加入效果栈，移形换影该在这一步执行
+
             // 结算效果 比如移形换影在这时候结算
             takeAllEffects();
 
+            // 这里开始不ask，直接结算。
             turnOwner.refreshItsRole();
             pointer = pointer.next;
             turnOwner = pointer.getNode();
             this.phase = Phase.DRAW_PHASE;
-            pushUpdateMessage();
+
+            // 推送回合结束事件
+            unPushEvenList.add(new TurnEndEvent());
+            pushUnUpdateMessage();
+            eventList.clear();
             return true;
         } else {
             return false;
@@ -285,50 +326,63 @@ public class Game {
      * @param askingPlayer
      */
     public void asking(Player askingPlayer) {
-        // 改变指针指向
+        // 正在询问的指针移动指向当前玩家, 如果当前玩家为被询问玩家，则两个指针此时同时指向同一个玩家
         this.askingPlayer = playerListNodeMap.get(askingPlayer);
         // 若已经处于询问递归当中，说明此时这不是最外层的问询，则什么也不做。
         if (!isAsking.get()) {
             isAsking.set(true);
+            // 这里有必要是异步的吗？
             Future<?> future = taskExecutor.submit(() -> {
                 // 主循环
                 try {
-                    askedPlayer = this.askingPlayer;
+                    askedPlayer = this.askingPlayer.next;
+                    AskingEvent askingEvent = new AskingEvent(askingPlayer.getOrder(), askedPlayer.getNode().getOrder());
+                    unPushEvenList.add(askingEvent);
+                    pushUnUpdateMessage();
                     while (isAsking.get()) {
-                        // 更新信息
-                        pushUpdateMessage();
                         // 应当在此等待对方应答或者发动效果。
                         waitAnswer();
                     }
                 } catch (BrokenBarrierException | InterruptedException e) {
                     e.printStackTrace();
                 }
-                // asking和其延伸问询全部结束
+                // 此时说明asking和其延伸问询全部结束，此时应该清算结果
                 takeAllEffects();
             });
         } else {
+            // 这一次的asking不会开启新的循环，只会使得上一个循环中的await被解冻
             answerIfAsking();
         }
     }
 
     /**
-     * 可重用
+     * 可重用的锁
      */
     public CyclicBarrier answer = new CyclicBarrier(2);
 
     public void waitAnswer() throws BrokenBarrierException, InterruptedException {
         // 等待触发
         answer.await();
+        pushUnUpdateMessage();
     }
 
     /**
      * 若当前有阻塞的waitAnswer，则响应该Answer
+     * 该方法仅在两种情况下被调用：
+     * 1.{@link #asking(Player)}在询问环节中，发起了新的Asking；
+     * 2.{@link #pass()}在询问环节中，不进行回应。
      */
     public synchronized void answerIfAsking() {
+        // 判断是否正在询问
         if (answer.getNumberWaiting() == 1) {
+            // 将被询问对象指向自己接下来的用户
             try {
+                // 易知，若该方法被Askng调用，此时Asking和Asked是重合的, 指针在这里没有区别, 而若被pass调用，asked就应当正常向后走一格。
                 ListNode<Player> next = askedPlayer.next;
+                // 改变指针指向
                 askedPlayer = next;
+                AskingEvent askingEvent = new AskingEvent(askingPlayer.getNode().getOrder(), askedPlayer.getNode().getOrder());
+                unPushEvenList.add(askingEvent);
                 answer.await();
             } catch (InterruptedException | BrokenBarrierException e) {
                 e.printStackTrace();
@@ -343,8 +397,9 @@ public class Game {
         if (!isAsking.get()) {
             throw new IllegalStateException("当前并未进行询问");
         } else {
-            // 若放弃该操作的玩家是当前asking玩家，说明此时整轮玩家都放弃了操作
+            // 若放弃该操作的玩家是当前asking玩家，易知，此时整轮玩家都放弃了操作
             if (askedPlayer == askingPlayer) {
+                // asked玩家是最后一个需要响应的玩家，他也pass时，说明整个asking环节已经结束了。
                 isAsking.set(false);
             } else {
                 answerIfAsking();
@@ -371,36 +426,35 @@ public class Game {
      * 该过程执行完一定会清空效果池;
      */
     protected void takeAllEffects() {
-        while (!effectChain.isEmpty() || !tempGraveyard.isEmpty() || !eventList.isEmpty()) {
+        if (!effectChain.isEmpty() || !tempGraveyard.isEmpty() || !eventList.isEmpty()) {
             int lastChainIndex = effectChain.size() - 1;
             // 对象上锁
             synchronized (this) {
+                // 该由这一组event引发的效果已经发动完了，应当结算掉这组event
+                eventList.clear();
                 // 若不为空
                 while (lastChainIndex > 0) {
                     Effect e = effectChain.remove(lastChainIndex);
-                    // 效果结算
+                    // 效果结算, 在这里头添加各种event
                     e.takeEffect(this);
-                    // 推送更新数据到客户端
-                    pushUpdateMessage();
-                    // event?
+                    // 推送更新数据到客户端 增加新的Event到eventList
+                    pushUnUpdateMessage();
                     lastChainIndex--;
                 }
-                // 检查墓地效果起效 移形换影应该在这个时候结算
+                // 检查墓地效果起效， 比如弃牌阶段诱发的时间风暴在这个时候结算
                 int tempGraveyardSize = tempGraveyard.size();
                 while (tempGraveyardSize > 0) {
+                    // 将暂存区的这张卡去除
                     Card c = tempGraveyard.remove(0);
                     // 只当是时间风暴
                     if (c.isActivable(this)) {
                         active(c.getEffect(0));
                     }
-                    // 这个效率很低
                     tempGraveyardSize--;
                 }
             }
-            // 开始新一轮响应 这个过程可能添加新的effect进入effectChain
+            // 此时可能由新的takeEffect导致evenList堆积，或者添加了次生的效果
             asking(host);
-            // 响应结束或者无响应
-            eventList.clear();
         }
     }
 
@@ -450,6 +504,10 @@ public class Game {
     }
 
 
+    /**
+     * 解锁接口，在这里添加解锁event
+     * @param layerNum
+     */
     public void decryptLock(int layerNum) {
         if (locks[layerNum] == 0) {
             throw new IllegalArgumentException("");
@@ -472,8 +530,11 @@ public class Game {
         this.statusEnum = GameStatusEnum.PLAYING;
     }
 
-    // 占位
-    public void pushUpdateMessage() {
+    // 推出尚未
+    public void pushUnUpdateMessage() {
+        pushUpdateMessage(unPushEvenList);
+        eventList.addAll(unPushEvenList);
+        unPushEvenList.clear();
     }
 
     /**
@@ -481,6 +542,12 @@ public class Game {
      */
     public void pushUpdateMessage(UpdatePushMessage message) {
         handler.sendMessageToUsers(message);
+    }
+
+    public void pushUpdateMessage(List<Event> events) {
+        UpdatePushMessage updatePushMessage = new UpdatePushMessageImpl();
+        updatePushMessage.setEventList(events);
+        pushUpdateMessage(updatePushMessage);
     }
 
     public Phase getPhase() {
@@ -586,7 +653,7 @@ public class Game {
         }
     }
 
-    private FieldView getView(){
+    private FieldView getView() {
         return new FieldView(this);
     }
 

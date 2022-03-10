@@ -106,7 +106,6 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
             logger.debug("将{}登记为用户{}", inetAddress, name);
         });
         logger.info("当前线上用户数量:{}", sessionToUserMap.size());
-
     }
 
     /**
