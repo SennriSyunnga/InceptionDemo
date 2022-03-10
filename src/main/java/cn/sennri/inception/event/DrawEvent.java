@@ -14,4 +14,16 @@ public class DrawEvent {
      * 如果subject是自己，则cardUid非空，否则为空。
      */
     int[] cardUid;
+
+    public int getCount() {
+        return count;
+    }
+
+    public int getSubject() {
+        return subject;
+    }
+
+    public int[] getCardUid() {
+        return cardUid;
+    }
 }

@@ -7,6 +7,12 @@ import java.util.concurrent.CountDownLatch;
 
 public interface Deck {
     /**
+     * 返回卡组大小
+     * @return
+     */
+    public int size();
+
+    /**
      * 抽卡，底层调用remove
      * @return
      */
@@ -36,4 +42,6 @@ public interface Deck {
      * @return
      */
     public boolean isEmpty();
+
+    Card[] getUidToCard();
 }

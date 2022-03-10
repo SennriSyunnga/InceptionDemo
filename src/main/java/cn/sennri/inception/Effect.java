@@ -25,8 +25,8 @@ public interface Effect {
     /**
      * 服务端层面的校验, 检查对象是否合法。
      * @param game
-     * @param game
-     * @param game
+     * @param source
+     * @param targets
      * @return
      */
     default boolean isActivationLegal(Game game, Player source, int[] targets){
@@ -40,8 +40,8 @@ public interface Effect {
     Card getEffectSource();
 
     /**
-     * 卡牌发动者
-     * @return
+     * 设置效果发动源
+     * @param player 卡牌发动者
      */
     void setSourcePlayer(Player player);
 

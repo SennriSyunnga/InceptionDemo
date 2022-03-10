@@ -23,8 +23,7 @@ public class ListNode<T> {
     public static <T> ListNode<T> connect(ListNode<T> first, ListNode<T> ... nodes){
         ListNode<T> node = first;
         for (ListNode<T> n:nodes){
-            node.next = n;
-            n.pre = node;
+            node.connectTo(n);
             node = n;
         }
         return first;
@@ -36,28 +35,29 @@ public class ListNode<T> {
         ListNode<T> node = head;
         for (T n:nodes){
             ListNode<T> temp = new ListNode<>(n);
-            node.next = temp;
-            temp.pre = node;
+            node.connectTo(temp);
             node = temp;
         }
-        node.next = head;
-        head.pre = node;
         return head;
     }
 
+    /**
+     * 将对象连成一个换，并返回头部
+     * @param nodes
+     * @param <T>
+     * @return nodes[0]所在的头节点
+     */
     @SafeVarargs
-    public static <T> ListNode<T> connect(T ... nodes){
+    public static <T> ListNode<T> connectAsLoop(T ... nodes){
         ListNode<T> head = new ListNode<>(nodes[0]);
         ListNode<T> listNode = head;
         for (int i = 1, nodesLength = nodes.length; i < nodesLength; i++) {
             T n = nodes[i];
             ListNode<T> temp = new ListNode<>(n);
-            listNode.next = temp;
-            temp.pre = listNode;
+            listNode.connectTo(temp);
             listNode = temp;
         }
-        listNode.next = head;
-        head.pre = listNode;
+        listNode.connectTo(head);
         return head;
     }
 

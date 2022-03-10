@@ -5,4 +5,8 @@ public class ErrorMessage extends AbstractMessage{
     public ErrorMessage(String content){
         this.content = content;
     }
+
+    public String getContent() {
+        return content;
+    }
 }

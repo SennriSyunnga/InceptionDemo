@@ -9,7 +9,7 @@ import cn.sennri.inception.util.Utils;
 import java.util.List;
 
 /**
- *
+ *  玩家行为接口 涉及到角色特殊效果的，需要通过role代理实现
  */
 public interface Player {
     /**
@@ -50,6 +50,8 @@ public interface Player {
      */
     void draw(Deck deck);
 
+    String getName();
+
     /**
      * 获取当前手卡
      * @return
@@ -60,12 +62,26 @@ public interface Player {
 
     PositionEnum getPos();
 
+    /**
+     * 获取uid信息
+     * @return
+     */
+    String getUid();
+
     default void setRole(Role role){
 
     }
 
+    /**
+     * 弃牌
+     * @param target
+     * @return
+     */
     boolean discard(int[] target);
 
+    /**
+     * 重置role中的回合状态
+     */
     default void refreshItsRole(){
         this.getRole().refresh();
     }
@@ -74,6 +90,11 @@ public interface Player {
 
     void active(Effect effect, int[] targets);
 
+    /**
+     * 是否打得到
+     * @param other
+     * @return
+     */
     default boolean canShoot(Player other) {
         return this.getPos().equals(other.getPos());
     }

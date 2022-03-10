@@ -18,6 +18,10 @@ public abstract class AbcDeck implements Deck{
         gameFinishedListeners = new ArrayList<>();
     }
 
+    @Override
+    public int size(){
+        return deck.size();
+    }
 
     /**
      * 没有具体实现，请在实现类里头进行赋值
@@ -77,5 +81,10 @@ public abstract class AbcDeck implements Deck{
     @Override
     public boolean isEmpty() {
         return this.deck.isEmpty();
+    }
+
+    @Override
+    public Card[] getUidToCard() {
+        return uidToCard;
     }
 }

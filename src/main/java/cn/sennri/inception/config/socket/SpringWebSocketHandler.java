@@ -6,7 +6,6 @@ import cn.sennri.inception.model.listener.Listener;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
 import cn.sennri.inception.server.GameFactory;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +17,10 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.*;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -151,40 +153,44 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
         Message m = objectMapper.readValue(payload , Message.class);
         // 若该消息是效果发动消息
         Player p = webSocketSessionPlayerMap.get(session);
-        if (m instanceof StartGameMessage){
-            if (session == hostSocket){
-                // check 准备状态
-                int readyPlayerNumber = readySessionSet.size();
-                // 测试阶段最小玩家人数为2;
-                if(readyPlayerNumber >= 2 && readyPlayerNumber == webSocketSessionPlayerMap.size()){
-                    this.game = GameFactory.getGameInstance(sessionToUserMap);
-                }
+        if (isPlaying.get()){
+            if (m instanceof ClientActiveMessage){
+                ClientActiveMessage apply = (ClientActiveMessage) m;
+                ServerAnswerActiveMessage r = new ServerAnswerActiveMessage();
+                Long id = apply.getMessageId();
+                r.setMessageId(id);
+                // 设置回复对象
+                r.setReplyId(m.getMessageId());
+                r.setReply(handleClientActiveMessage(session, game, apply));
+                sendMessage(session, r);
             }
-        }
-        if (m instanceof ClientActiveMessage){
-            ClientActiveMessage apply = (ClientActiveMessage) m;
-            ServerAnswerActiveMessage r = new ServerAnswerActiveMessage();
-            Long id = apply.getMessageId();
-            r.setMessageId(id);
-            // 设置回复对象
-            r.setReplyId(m.getMessageId());
-            r.setReply(handleClientActiveMessage(session, game, apply));
-            String s = objectMapper.writeValueAsString(r);
-            session.sendMessage(new TextMessage(s));
-        }else if (m instanceof DrawMessage){
-            if (game.getPhase().equals(Game.Phase.DRAW_PHASE)){
+            // 抽牌阶段消息，用来完成抽卡阶段
+            else if (m instanceof DrawMessage){
                 game.drawInDrawPhase(p);
+            }else if(m instanceof ReviveMessage){
+                ReviveMessage reviveMessage = (ReviveMessage) m;
+                game.revive(p, reviveMessage.getTargetNum(), reviveMessage.getCostCardNum());
             }
-        }else if(m instanceof ReviveMessage){
-            ReviveMessage reviveMessage = (ReviveMessage) m;
-            game.revive(p, reviveMessage.getTargetNum(), reviveMessage.getCostCardNum());
+        }else{
+            if (m instanceof StartGameMessage){
+                if (session == hostSocket){
+                    // check 准备状态
+                    int readyPlayerNumber = readySessionSet.size();
+                    // 测试阶段最小玩家人数为2;
+                    if(readyPlayerNumber >= 2 && readyPlayerNumber == webSocketSessionPlayerMap.size()){
+                        this.game = GameFactory.getGameInstance(sessionToUserMap);
+                        this.isPlaying.set(true);
+                    }
+                }
+            }else if(m instanceof ClientReadyMessage){
+                readySessionSet.add(session);
+            }
         }
     }
 
-    Game game;
+    private Game game;
 
-    Map<WebSocketSession, Player> webSocketSessionPlayerMap = new ConcurrentHashMap<>();
-
+    protected Map<WebSocketSession, Player> webSocketSessionPlayerMap = new ConcurrentHashMap<>();
 
     boolean handleClientActiveMessage(WebSocketSession webSocketSession, Game game, ClientActiveMessage message){
         // todo 应该分离发动对象和卡片拥有者，或者增加一个字段判断是不是发动共有卡片
@@ -223,6 +229,21 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
             }
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    public void sendMessageToUsers(Message message) {
+        for ( Map.Entry<String, WebSocketSession> e: usersToSessionMap.entrySet()) {
+            try {
+                WebSocketSession webSocketSession = e.getValue();
+                if (webSocketSession.isOpen()) {
+                    sendMessage(webSocketSession, message);
+                }else{
+                    logger.warn("{} is offline.", e.getKey());
+                }
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
         }
     }
 

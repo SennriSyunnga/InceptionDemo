@@ -1,8 +1,7 @@
 package cn.sennri.inception.client.controller;
 
-import cn.sennri.inception.message.ClientActiveMessage;
-import cn.sennri.inception.message.Message;
-import cn.sennri.inception.message.ServerAnswerActiveMessage;
+import cn.sennri.inception.client.view.FieldView;
+import cn.sennri.inception.message.*;
 import cn.sennri.inception.model.listener.Listener;
 import cn.sennri.inception.model.vo.ResponseBodyImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -21,6 +20,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
+ *
+ * 这里面应该抽象许多内容到service层，以便于不适用restful时也能调用以下方法，现在是权宜之计。
  * @author DELL
  */
 @Slf4j
@@ -43,9 +44,16 @@ public class ClientController {
             .connectTimeout(3, TimeUnit.SECONDS)
             .build();
 
+
+    public FieldView fieldView;
+
+    // 先当成unique的吧。
+    public String name;
+
     @ResponseBody
     @RequestMapping(value = "/login", method = RequestMethod.POST)
     public ResponseBodyImpl<Response> login(@RequestParam String name, @RequestParam String remoteAddr) throws InterruptedException {
+        this.name = name;
         final String url = "ws://" + remoteAddr + ":" + PORT + "/socket/server";
         // 构建一个连接请求对象
         Request request = new Request.Builder().get().url(url).header("WEB_SOCKET_USERID", name).build();
@@ -71,6 +79,21 @@ public class ClientController {
                     e.printStackTrace();
                     // todo 如果这里是阻塞消息，是不时应该在这个地方通知对方失败了，防止接着阻塞？
                 }
+                if (m instanceof ErrorMessage){
+                    ErrorMessage em = (ErrorMessage) m;
+                    log.error("");
+                    return;
+                }
+                if (fieldView == null){
+                    if (m instanceof ServerStartGameMessage) {
+                        ServerStartGameMessage message = (ServerStartGameMessage) m;
+                        fieldView = message.getFiledView();
+                        fieldView.initialize(name);
+                    }else{
+                        log.error("状态不一致");
+                    }
+                    return;
+                }
                 if (m instanceof ServerAnswerActiveMessage) {
                     ServerAnswerActiveMessage answer = (ServerAnswerActiveMessage) m;
                     Long id = answer.getMessageId();
@@ -83,6 +106,8 @@ public class ClientController {
                     }else{
                         log.debug("Message id{} is consumed already", id);
                     }
+                }else if(m instanceof UpdatePushMessage){
+                    fieldView.consumeUpdateMessage((UpdatePushMessage) m);
                 }
                 log.debug("Client received message:{}", text);
             }

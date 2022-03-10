@@ -29,6 +29,11 @@ public class BasePlayer implements Player {
      */
     public String name;
 
+    @Override
+    public String getName() {
+        return name;
+    }
+
     public BasePlayer(Game game, WebSocketSession socketSession, String name){
         this.name = name;
         this.game = game;
@@ -87,6 +92,11 @@ public class BasePlayer implements Player {
     @Override
     public boolean revive(Player p, int[] num) {
         return role.revive(p,  num);
+    }
+
+    @Override
+    public String getUid(){
+        return this.uid;
     }
 
     @Override

@@ -2,9 +2,12 @@ package cn.sennri.inception.server;
 
 import cn.sennri.inception.Effect;
 import cn.sennri.inception.card.Card;
+import cn.sennri.inception.client.view.FieldView;
+import cn.sennri.inception.config.socket.SpringWebSocketHandler;
 import cn.sennri.inception.event.Event;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.field.DeckImpl;
+import cn.sennri.inception.message.UpdatePushMessage;
 import cn.sennri.inception.model.listener.Listener;
 import cn.sennri.inception.player.BasePlayer;
 import cn.sennri.inception.player.HostPlayer;
@@ -67,30 +70,53 @@ public class Game {
 
     // Player里应该维护一个socket
 
+    /**
+     * 当前回合玩家
+     */
     protected Player turnOwner;
 
+    protected SpringWebSocketHandler handler;
+
+    public Game(Map<WebSocketSession, String> sessionToUserMap, SpringWebSocketHandler handler) {
+        this(sessionToUserMap);
+        this.handler = handler;
+        initializeRole();
+    }
+
+
     public Game(Map<WebSocketSession, String> sessionToUserMap) {
-        // 抽取梦主
+        // 生成list以便于有序
         List<Map.Entry<WebSocketSession, String>> list = new ArrayList<>(sessionToUserMap.entrySet());
+        // 随机排列站位
         Collections.shuffle(list);
         int playerSize = list.size();
         this.players = new Player[playerSize];
         Map.Entry<WebSocketSession, String> hostEntry = list.get(0);
-        this.host = new HostPlayer(this, hostEntry.getKey(), hostEntry.getValue());
+        WebSocketSession hostSession = hostEntry.getKey();
+        this.host = new HostPlayer(this, hostSession, hostEntry.getValue());
+        webSocketSessionPlayerMap.put(hostSession ,host);
+        // 0位固定为梦主
         players[0] = host;
         for(int i = 1;i < playerSize;i++){
             Map.Entry<WebSocketSession, String> entry = list.get(i);
-            players[i] = new BasePlayer(this, entry.getKey(), entry.getValue());
+            WebSocketSession session = entry.getKey();
+            Player player = new BasePlayer(this, session, entry.getValue());
+            webSocketSessionPlayerMap.put(session, player);
+            players[i] = player;
         }
-
-        this.pointer = ListNode.connect(players);
+        // 构建连接关系
+        this.pointer = ListNode.connectAsLoop(players);
         this.turnOwner = host;
         this.secret = 4;
         this.phase = Phase.DRAW_PHASE;
-        initialize();
     }
 
-    public void initialize() {
+    protected Map<WebSocketSession, Player> webSocketSessionPlayerMap = new ConcurrentHashMap<>();
+
+    /**
+     *
+     */
+    public void initializeRole() {
         // 有环对象随机抽取梦主
         // future 异步等待选择结果
         // future.get() 获取角色选择信息
@@ -215,7 +241,7 @@ public class Game {
             }
             // 进入结束阶段
             this.phase = Phase.END_PHASE;
-            pushView();
+            pushUpdateMessage();
             // 结算效果 比如移形换影在这时候结算
             takeAllEffects();
 
@@ -223,7 +249,7 @@ public class Game {
             pointer = pointer.next;
             turnOwner = pointer.getNode();
             this.phase = Phase.DRAW_PHASE;
-            pushView();
+            pushUpdateMessage();
             return true;
         } else {
             return false;
@@ -270,7 +296,7 @@ public class Game {
                     askedPlayer = this.askingPlayer;
                     while (isAsking.get()) {
                         // 更新信息
-                        pushView();
+                        pushUpdateMessage();
                         // 应当在此等待对方应答或者发动效果。
                         waitAnswer();
                     }
@@ -291,7 +317,8 @@ public class Game {
     public CyclicBarrier answer = new CyclicBarrier(2);
 
     public void waitAnswer() throws BrokenBarrierException, InterruptedException {
-        answer.await(); // 等待触发
+        // 等待触发
+        answer.await();
     }
 
     /**
@@ -338,9 +365,11 @@ public class Game {
 
     protected AtomicBoolean isAsking = new AtomicBoolean(false);
 
-    // 不会同时执行多个以下方法
-    // 不会在这个过程中有新的卡加入该卡池。
-    // 该过程执行完一定会清空效果池
+    /**
+     * 设计上，不会同时执行多个以下方法
+     * 不会在这个过程中有新的卡加入该卡池。
+     * 该过程执行完一定会清空效果池;
+     */
     protected void takeAllEffects() {
         while (!effectChain.isEmpty() || !tempGraveyard.isEmpty() || !eventList.isEmpty()) {
             int lastChainIndex = effectChain.size() - 1;
@@ -352,7 +381,7 @@ public class Game {
                     // 效果结算
                     e.takeEffect(this);
                     // 推送更新数据到客户端
-                    pushView();
+                    pushUpdateMessage();
                     // event?
                     lastChainIndex--;
                 }
@@ -436,85 +465,23 @@ public class Game {
         }
     }
 
-
-//    public void initialize() {
-//        // 根据人数 处理list，形成游戏布局
-//
-//        roles = new CopyOnWriteArrayList<>();
-//
-//        // 分发角色牌
-//        int size = list.size();
-//        CompletableFuture[] futures = new CompletableFuture[size];
-//
-//        for (int i = 1; i < size; i++) {
-//            // 从角色卡中抽出几张牌当做角色
-//            int finalI = i;
-//            roles.add(null);
-//            CompletableFuture<String> res = CompletableFuture.supplyAsync(() -> {
-//                // remote
-//                while (true) {
-//                    // await
-//                    String roleName = roles.get(finalI);
-//                    if (roleName != null) {
-//                        return roleName;
-//                    }
-//                }
-//            });
-//            futures[i] = res;
-//        }
-//        CompletableFuture.allOf(futures);
-//        roles = null;
-//        players = new Player[size];
-//
-//        try {
-//            players[0] = getNewPlayer((String) futures[0].get(), list.get(0), null);
-//            for (int i = 0; i < size; i++) {
-//                CompletableFuture<String> future = futures[i];
-//                players[i] = getNewPlayer(future.get(), list.get(i + 1), null);
-//            }
-//        } catch (InterruptedException | ExecutionException e) {
-//            e.printStackTrace();
-//        }
-//
-//
-//        // 有环对象随机抽取梦主
-//        // future 异步等待选择结果
-//        // future.get() 获取角色选择信息
-//        // 随机构成环
-//        // 这里应该替换成根据当前人数来从Factory获取对应的deckImpl
-//        Deck deck = new DeckImpl();
-//        deck.shuffle();
-//        secret = 4;
-//        phase = Phase.DRAW_PHASE;
-//        host = players[0];
-//        turnOwner = host;
-//        //pointer 指针指向当前玩家
-//    }
-
     /**
      * @return if host wins
      */
-    public void start() throws BrokenBarrierException, InterruptedException, ExecutionException {
-        // 应该为守护线程
+    public void start() {
         this.statusEnum = GameStatusEnum.PLAYING;
     }
 
-    public void pushView() {
-
+    // 占位
+    public void pushUpdateMessage() {
     }
-    // 根据playerClient里的card信息，发送指令给playerServer
-    // 服务器校验阶段是否正确。
-    // 服务器校验效果是否正确
-    // 构建效果栈，push该效果
-    // 按逆时针顺序同步询问是否响应。
-    // 对手玩家选择响应卡。
-    // 若有响应，加入效果栈。
-    // 该过程为一个while true 过程。
-    // 维护一个询问指针，逆时针走动，维护一个最后一个发动效果玩家的引用。
-    // 若发动效果，将最后发动玩家置为该玩家，
-    // 若当前玩家不发动效果，则检查当前玩家是否为上轮发动的玩家
-    // 若相同则结束循环，开始pop效果，依次处理。
-    // 每次循环结束时询问指针向后移动
+
+    /**
+     *
+     */
+    public void pushUpdateMessage(UpdatePushMessage message) {
+        handler.sendMessageToUsers(message);
+    }
 
     public Phase getPhase() {
         return phase;
@@ -587,8 +554,6 @@ public class Game {
     public enum GameStatusEnum {
         WAITING,
         PLAYING,
-        ASKING,
-        END
     }
 
     public enum Phase {
@@ -621,5 +586,8 @@ public class Game {
         }
     }
 
+    private FieldView getView(){
+        return new FieldView(this);
+    }
 
 }

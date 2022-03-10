@@ -51,6 +51,7 @@ public interface Card {
 
     /**
      * 仅仅是客户端级别的校验
+     * 但客户端没有game啊。
      * @param game
      * @return
      */
