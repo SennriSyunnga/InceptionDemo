@@ -87,69 +87,28 @@ askClient将被ask的用户置为asked，此时可以发动满足条件的响应
 并返回200
 
 # 事件Event
-便于场合类效果发动。
+事件属于抽象的行为结果
+例如，骰子摇出6、抽了两张牌等等
+例如一个效果结算完成，相关的所有事件都会通过unUpdateEvenList然后推送到客户端进行结算。
+随后将事件添加到evenList当中。
+evenList表示在一组连锁上所有发生的事件。
+在takeEffect时，意味着由这些事件可引发的效果已经不存在了，因此会清空evenList
+unUpdateEvenList在服务中堆积的新事件。通常，一个效果的事件是复合的。
 
-在一串效果结束完成后，确定场上是否存在必发条件。
-
-此后，询问是否存在
-
-## api
-卡牌的效果应该都是调用一下的接口进行
-
-draw()
-
-revive()
-
-toUpperLayer
-
-toLowerLayer
-
-toCertainLayer
-
-kill();
-
-transfer()
-
-discard()
-
-switchToCertainPhase();
-
-endTurn()
-
-effect = new ArrayDeque sideEffect = new ArrayDeque
-
-doCost();
-push();
-sideEffect();
-ask(); →递归,阻塞的。 
-takeEffect()
-
-cost和effect应该共同维护一个discard区，用于记录当前连锁中弃掉的牌的内容。
-takeEffect最末端，应该遍历discard区是否有卡可以发动。（未来可能还要确认其他条件）
-
-随后进行一个ask
-
-
-Event
-抽象的事件结果
-例如，骰子摇出6、
-
+# takeEffect
 一个栈的效果全部处理完后，会进行asking
-如果asking没有应答，就应该清除掉RecentEvent，
-再次进行push，表明当前所有效果链都结算完毕
-
+如果asking没有应答，就应该清除掉event list，
+随后推送askingEndMessage，表明当前所有效果链都结算完毕
 效果一定是调用游戏的原子性操作进行的。
 应该在每一个游戏的原子性动作上校验是否已经游戏结束。
-
-Message
+# Message
 应答消息 通过id标识
 两端通过id 和map来维护一个待应答消息
 通过listener的阻塞方法进行等待。
 updateMessage 是不是相当于event？
 骰子应该是一个事件 notify，触发某个回调事件，但是算成event如何？
 update应该定义为对view有变更，且由下一次view才能改变的东西的话，骰子结果就不算是了
-
-
+## 
 pushUpdateMessage
 // 在一定时间内尝试推送一个同一编号的消息
 如果超过一定时长没有得到回应，则push第二次，

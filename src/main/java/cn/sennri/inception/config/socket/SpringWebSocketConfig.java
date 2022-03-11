@@ -16,7 +16,6 @@ public class SpringWebSocketConfig implements WebSocketConfigurer {
         registry.addHandler(webSocketHandler(),"/socket/server")
                 .addInterceptors(new SpringWebSocketHandlerInterceptor())
                 .setAllowedOrigins("*");
-
 //        registry.addHandler(webSocketHandler(), "/sockjs/server")
 //                .addInterceptors(new SpringWebSocketHandlerInterceptor()).setAllowedOrigins("*").withSockJS();
     }

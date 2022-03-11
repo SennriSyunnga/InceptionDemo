@@ -1,8 +1,7 @@
 package cn.sennri.inception.config;
 
-import cn.sennri.inception.message.ClientActiveMessage;
-import cn.sennri.inception.message.Message;
-import cn.sennri.inception.message.ServerAnswerActiveMessage;
+import cn.sennri.inception.message.*;
+import cn.sennri.inception.util.ClassUtils;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
@@ -17,6 +16,9 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Set;
 import java.util.TimeZone;
 
 
@@ -49,9 +51,7 @@ public class ObjectMapperConfig {
     public ObjectMapper jacksonObjectMapper(Jackson2ObjectMapperBuilder builder)
     {
         objectMapper = builder.createXmlMapper(false).build();
-
         // 通过该方法对mapper对象进行设置，所有序列化的对象都将按该规则进行序列化
-
         // 写入时仅写入非空字段
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         // 设置时间格式
@@ -69,21 +69,9 @@ public class ObjectMapperConfig {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
 
         // 多态支持
-
-        // 登记父类
-        objectMapper.registerSubtypes(Message.class);
-        // 登记子类，新的类型都添加在这里。
-        registerSubtypeToMapper(ClientActiveMessage.class);
-        registerSubtypeToMapper(ServerAnswerActiveMessage.class);
-
+        Collection<Class<?>> classes = ClassUtils.getClasses(
+                org.apache.commons.lang3.ClassUtils.getPackageName(Message.class));
+        objectMapper.registerSubtypes(classes);
         return objectMapper;
-    }
-
-    /**
-     * 登记子类
-     * @param clazz
-     */
-    public void registerSubtypeToMapper(Class<?> clazz){
-        this.objectMapper.registerSubtypes(new NamedType(clazz, clazz.getSimpleName()));
     }
 }

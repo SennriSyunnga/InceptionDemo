@@ -166,6 +166,18 @@ public class ClientController {
     }
 
     @ResponseBody
+    @RequestMapping(value = "/test2", method = RequestMethod.POST)
+    public ResponseBodyImpl<?> testMultiThread() throws JsonProcessingException {
+        TestMessage testMessage = new TestMessage();
+        sendMessage(testMessage);
+        return ResponseBodyImpl.createNewResponse(HttpStatus.OK);
+    }
+
+    public void sendMessage(Message message) throws JsonProcessingException {
+        webSocket.send(jacksonObjectMapper.writeValueAsString(message));
+    }
+
+    @ResponseBody
     @RequestMapping(value = "/test", method = RequestMethod.POST)
     public ResponseBodyImpl<?> active() throws JsonProcessingException {
         if (this.webSocket == null) {

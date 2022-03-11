@@ -10,8 +10,12 @@ import java.util.List;
 
 public abstract class AbcDeck implements Deck{
 
+    /**
+     * 建立uid到卡片的映射
+     */
     protected Card[] uidToCard;
 
+    @Deprecated
     protected List<GameFinishedListener> gameFinishedListeners;
 
     AbcDeck(){
@@ -32,11 +36,6 @@ public abstract class AbcDeck implements Deck{
      * 指向卡顶
      */
     public int topIndexPointer;
-
-    /**
-     * 效果来源，通过{@link Card#getOwner()}可以获取到效果的发动者。
-     */
-    public Card effectSource;
 
     /**
      * 可以支持牌顶抽卡的listener

@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -21,7 +22,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
@@ -73,19 +76,22 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
     public SpringWebSocketHandler() {
     }
 
+    @Autowired
+    public ThreadPoolTaskExecutor asyncThreadPoolTaskExecutor;
+
     /**
      * 连接成功时候，会触发页面上onopen方法
      */
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
 
-        if (Objects.requireNonNull(session.getRemoteAddress()).equals(session.getLocalAddress())){
+        if (Objects.requireNonNull(session.getRemoteAddress().getAddress()).equals(session.getLocalAddress().getAddress())) {
             this.hostSocket = session;
             logger.info("用户为本机用户，正在创建大厅。");
             lobbyCreated.set(true);
-        }else{
+        } else {
             // 若大厅未建立，则拒绝非本机的连接
-            if (!lobbyCreated.get()){
+            if (!lobbyCreated.get()) {
                 try {
                     sendMessage(session, new ErrorMessage("当前主机未建立大厅"));
                     session.close(CloseStatus.POLICY_VIOLATION);
@@ -100,7 +106,7 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
         // 若非空，则携带信息，当前为测试，因此不强制要求携带信息；
         Optional.ofNullable(session.getHandshakeHeaders().get(USER_ID)).ifPresent(o -> {
             String name = o.get(0);
-            logger.debug("会话{}将自身标识为{}, 将使用该身份作为唯一标识",inetAddress, name);
+            logger.debug("会话{}将自身标识为{}, 将使用该身份作为唯一标识", inetAddress, name);
             usersToSessionMap.put(name, session);
             sessionToUserMap.put(session, name);
             logger.debug("将{}登记为用户{}", inetAddress, name);
@@ -113,35 +119,23 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
      */
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) throws Exception {
-        Optional.ofNullable(session.getHandshakeHeaders().get(USER_ID)).ifPresent(o -> {
-            String name = sessionToUserMap.remove(session);
-            usersToSessionMap.remove(name);
-            logger.info("断开用户{}与服务器的链接", name);
-        });
-        logger.debug("关闭web socket连接;\n" +
-                "剩余在线用户{}",usersToSessionMap.size());
+        String name = sessionToUserMap.remove(session);
+        usersToSessionMap.remove(name);
+        logger.info("断开用户{}与服务器的链接", name);
+        logger.debug("剩余在线用户{}", usersToSessionMap.size());
 
-        if (lobbyCreated.get()){
-            if (session.equals(hostSocket)){
+        if (lobbyCreated.get()) {
+            if (session.equals(hostSocket)) {
                 logger.info("大厅房主已经退出链接，正在关闭大厅。");
                 lobbyCreated.set(false);
             }
         }
     }
 
+    CyclicBarrier cyclicBarrier = new CyclicBarrier(2);
 
     /**
-     * 向特定的socket发送消息
-     * @param session
-     * @param selfDefineMessage
-     * @throws IOException
-     */
-    public void sendMessage(WebSocketSession session, Message selfDefineMessage) throws IOException {
-        session.sendMessage(new TextMessage(this.objectMapper.writeValueAsString(selfDefineMessage)));
-    }
-
-    /**
-     * js调用websocket.send时候，会调用该方法
+     * 处理ws 消息
      */
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
@@ -149,11 +143,25 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
         String payload = message.getPayload();
         // 收到消息，自定义处理机制，实现业务
         logger.debug("服务器收到消息：{}", payload);
-        Message m = objectMapper.readValue(payload , Message.class);
+        Message m = objectMapper.readValue(payload, Message.class);
         // 若该消息是效果发动消息
-        Player p = webSocketSessionPlayerMap.get(session);
-        if (isPlaying.get()){
-            if (m instanceof ClientActiveMessage){
+
+        if (m instanceof TestMessage) {
+            asyncThreadPoolTaskExecutor.submit(() -> {
+                try {
+                    cyclicBarrier.await();
+                } catch (InterruptedException | BrokenBarrierException e) {
+                    e.printStackTrace();
+                }
+                logger.info("done!");
+            });
+            return;
+        }
+        // 游戏进行中
+        if (isPlaying.get()) {
+            // 获取当前session对应的玩家
+            Player p = webSocketSessionPlayerMap.get(session);
+            if (m instanceof ClientActiveMessage) {
                 ClientActiveMessage apply = (ClientActiveMessage) m;
                 ServerAnswerActiveMessage r = new ServerAnswerActiveMessage();
                 Long id = apply.getMessageId();
@@ -164,24 +172,25 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
                 sendMessage(session, r);
             }
             // 抽牌阶段消息，用来完成抽卡阶段
-            else if (m instanceof DrawMessage){
+            else if (m instanceof DrawMessage) {
                 game.drawInDrawPhase(p);
-            }else if(m instanceof ReviveMessage){
+            } else if (m instanceof ReviveMessage) {
                 ReviveMessage reviveMessage = (ReviveMessage) m;
                 game.revive(p, reviveMessage.getTargetNum(), reviveMessage.getCostCardNum());
             }
-        }else{
-            if (m instanceof StartGameMessage){
-                if (session == hostSocket){
+        } else {
+            if (m instanceof StartGameMessage) {
+                if (session == hostSocket) {
                     // check 准备状态
                     int readyPlayerNumber = readySessionSet.size();
                     // 测试阶段最小玩家人数为2;
-                    if(readyPlayerNumber >= 2 && readyPlayerNumber == webSocketSessionPlayerMap.size()){
-                        this.game = GameFactory.getGameInstance(sessionToUserMap);
+                    if (readyPlayerNumber >= 2 && readyPlayerNumber == webSocketSessionPlayerMap.size()) {
+                        this.game = GameFactory.getGameInstance(sessionToUserMap, this);
                         this.isPlaying.set(true);
+                        this.webSocketSessionPlayerMap = game.webSocketSessionPlayerMap;
                     }
                 }
-            }else if(m instanceof ClientReadyMessage){
+            } else if (m instanceof ClientReadyMessage) {
                 readySessionSet.add(session);
             }
         }
@@ -189,9 +198,9 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
 
     private Game game;
 
-    protected Map<WebSocketSession, Player> webSocketSessionPlayerMap = new ConcurrentHashMap<>();
+    private Map<WebSocketSession, Player> webSocketSessionPlayerMap;
 
-    boolean handleClientActiveMessage(WebSocketSession webSocketSession, Game game, ClientActiveMessage message){
+    boolean handleClientActiveMessage(WebSocketSession webSocketSession, Game game, ClientActiveMessage message) {
         // todo 应该分离发动对象和卡片拥有者，或者增加一个字段判断是不是发动共有卡片
         Player p = webSocketSessionPlayerMap.get(webSocketSession);
         Card card = p.getHandCards().get(message.getHandCardNumber());
@@ -218,12 +227,12 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
      * @param userId
      * @param message
      */
-    public void sendMessageToUser(String userId, TextMessage message) {
+    public void sendMessageToUser(String userId, Message message) {
         WebSocketSession session = usersToSessionMap.get(userId);
         try {
             if (session.isOpen()) {
-                session.sendMessage(message);
-            }else{
+                sendMessage(session, message);
+            } else {
                 throw new IllegalStateException("Target session is closed.");
             }
         } catch (IOException e) {
@@ -231,13 +240,27 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    public void sendMessageToUsers(Message message) {
-        for ( Map.Entry<String, WebSocketSession> e: usersToSessionMap.entrySet()) {
+    /**
+     * 向特定的socket发送消息
+     * @param session
+     * @param selfDefineMessage
+     * @throws IOException
+     */
+    public void sendMessage(WebSocketSession session, Message selfDefineMessage) throws IOException {
+        session.sendMessage(new TextMessage(this.objectMapper.writeValueAsString(selfDefineMessage)));
+    }
+
+    /**
+     * 向所有用户发送更新消息
+     * @param message
+     */
+    public void sendMessageToAllUsers(Message message) {
+        for (Map.Entry<String, WebSocketSession> e : usersToSessionMap.entrySet()) {
             try {
                 WebSocketSession webSocketSession = e.getValue();
                 if (webSocketSession.isOpen()) {
                     sendMessage(webSocketSession, message);
-                }else{
+                } else {
                     logger.warn("{} is offline.", e.getKey());
                 }
             } catch (IOException ex) {
@@ -246,23 +269,4 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    /**
-     * 给所有在线用户发送消息
-     *
-     * @param message
-     */
-    public void sendMessageToUsers(TextMessage message) {
-        for ( Map.Entry<String, WebSocketSession> e: usersToSessionMap.entrySet()) {
-            try {
-                WebSocketSession webSocketSession = e.getValue();
-                if (webSocketSession.isOpen()) {
-                    webSocketSession.sendMessage(message);
-                }else{
-                    logger.warn("{} is offline.", e.getKey());
-                }
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
-        }
-    }
 }

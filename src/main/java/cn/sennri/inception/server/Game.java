@@ -7,6 +7,7 @@ import cn.sennri.inception.config.socket.SpringWebSocketHandler;
 import cn.sennri.inception.event.*;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.field.DeckImpl;
+import cn.sennri.inception.message.GameOverMessage;
 import cn.sennri.inception.message.UpdatePushMessage;
 import cn.sennri.inception.message.UpdatePushMessageImpl;
 import cn.sennri.inception.model.listener.Listener;
@@ -82,7 +83,6 @@ public class Game {
         initializeRole();
     }
 
-
     public Game(Map<WebSocketSession, String> sessionToUserMap) {
         // 生成list以便于有序
         List<Map.Entry<WebSocketSession, String>> list = new ArrayList<>(sessionToUserMap.entrySet());
@@ -94,12 +94,14 @@ public class Game {
         WebSocketSession hostSession = hostEntry.getKey();
         this.host = new HostPlayer(this, hostSession, hostEntry.getValue());
         webSocketSessionPlayerMap.put(hostSession, host);
-        // 0位固定为梦主
+        // 0位固定为梦主，也因此无需设置order
         players[0] = host;
         for (int i = 1; i < playerSize; i++) {
             Map.Entry<WebSocketSession, String> entry = list.get(i);
             WebSocketSession session = entry.getKey();
             Player player = new BasePlayer(this, session, entry.getValue());
+            // 记录座次
+            player.setOrder(i);
             webSocketSessionPlayerMap.put(session, player);
             players[i] = player;
         }
@@ -110,7 +112,7 @@ public class Game {
         this.phase = Phase.DRAW_PHASE;
     }
 
-    protected Map<WebSocketSession, Player> webSocketSessionPlayerMap = new ConcurrentHashMap<>();
+    public Map<WebSocketSession, Player> webSocketSessionPlayerMap = new ConcurrentHashMap<>();
 
     /**
      *
@@ -155,15 +157,6 @@ public class Game {
         }
     }
 
-    public void drawDeck(Player player, int drawTimes) {
-        for (int i = 0;i < drawTimes;i++){
-            player.draw(deck);
-        }
-        DrawEvent drawEvent = new DrawEvent();
-        unPushEvenList.add(drawEvent);
-    }
-
-
     /**
      * 游戏复活接口
      * @param source
@@ -182,11 +175,15 @@ public class Game {
         return source.revive(target, num);
     }
 
-
     List<Event> unPushEvenList = new ArrayList<>();
 
     /**
-     * 发动效果接口
+     * 本回合使用并且送去墓地的卡由该表维护
+     */
+    List<Card> usedCardInThisTurn = new ArrayList<>();
+
+    /**
+     * 发动手牌效果接口
      * @param source 效果来源
      * @param card 发动卡片
      * @param num   效果序号
@@ -200,11 +197,18 @@ public class Game {
             source.active(e, targets);
             effectChain.add(e);
 
+            // 将该卡加入临时墓地区
+            tempGraveyard.add(card);
+            graveyard.add(card);
+            // 本回合使用过的卡片增加该卡
+            usedCardInThisTurn.add(card);
+
             ActiveEvent activeEvent = new ActiveEvent();
             activeEvent.setCardUid(card.getUid());
             activeEvent.setObject(targets);
             activeEvent.setSubject(source.getOrder());
             activeEvent.setHandCardEffect(card.getOwner() != null);
+
             unPushEvenList.add(activeEvent);
             pushUnUpdateMessage();
 
@@ -272,7 +276,6 @@ public class Game {
             // 添加到 队列 最前面
             PhaseEndEvent endEvent = new PhaseEndEvent();
             // 服务端的evenList不关心顺序，只关心历史
-            eventList.add(endEvent);
             unPushEvenList.add(0, endEvent);
             pushUnUpdateMessage();
 
@@ -291,34 +294,63 @@ public class Game {
             unPushEvenList.add(new TurnEndEvent());
             pushUnUpdateMessage();
             eventList.clear();
+            usedCardInThisTurn.clear();
             return true;
         } else {
             return false;
         }
     }
 
+    /**
+     * 从卡顶弃牌
+     * @param times 弃牌次数
+     */
     public void deckAbandonCard(int times) {
+        int[] cardIds = new int[times];
         for (int i = 0; i < times; i++) {
-            deck.abandon(graveyard, tempGraveyard);
+            if (deck.size() == 0){
+                gameOver(true);
+            }
+            Card card = deck.remove();
+            graveyard.add(card);
+            tempGraveyard.add(card);
+            cardIds[i] = card.getUid();
         }
+        unPushEvenList.add(new AbandonEvent(cardIds));
     }
 
+    /**
+     *
+     * @param player 抽卡玩家
+     * @param drawTimes 抽卡次数
+     */
+    public void drawDeck(Player player, int drawTimes) {
+        for (int i = 0;i < drawTimes;i++){
+            if (deck.size() == 0){
+                gameOver(true);
+            }
+            player.draw(deck);
+        }
+        DrawEvent drawEvent = new DrawEvent();
+        unPushEvenList.add(drawEvent);
+    }
+
+    /**
+     * 游戏结束调用这个
+     * @param hostPlayerWin 游戏结束时是否梦主获胜
+     */
+    public void gameOver(boolean hostPlayerWin){
+        handler.sendMessageToAllUsers(new GameOverMessage(hostPlayerWin));
+    }
+
+    /**
+     * 从某个地方除外卡片
+     * @param card
+     * @param from 需要移除卡片的区域，可以是墓地、
+     */
     public void vanish(Card card, List<Card> from) {
         from.remove(card);
         exclusionZone.add(card);
-    }
-
-    ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
-
-    {
-        taskExecutor.setCorePoolSize(20);
-        taskExecutor.setMaxPoolSize(200);
-        taskExecutor.setQueueCapacity(25);
-        taskExecutor.setKeepAliveSeconds(200);
-        taskExecutor.setThreadNamePrefix("oKong-");
-        // 线程池对拒绝任务（无线程可用）的处理策略，目前只支持AbortPolicy、CallerRunsPolicy；默认为后者
-        taskExecutor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
-        taskExecutor.initialize();
     }
 
     /**
@@ -332,7 +364,7 @@ public class Game {
         if (!isAsking.get()) {
             isAsking.set(true);
             // 这里有必要是异步的吗？
-            Future<?> future = taskExecutor.submit(() -> {
+            Future<?> future = handler.asyncThreadPoolTaskExecutor.submit(() -> {
                 // 主循环
                 try {
                     askedPlayer = this.askingPlayer.next;
@@ -421,9 +453,8 @@ public class Game {
     protected AtomicBoolean isAsking = new AtomicBoolean(false);
 
     /**
-     * 设计上，不会同时执行多个以下方法
-     * 不会在这个过程中有新的卡加入该卡池。
-     * 该过程执行完一定会清空效果池;
+     * 设计上，不会同时执行同步块中的方法，但是可能由于askingHost造成递归。当然，askingHost是异步的，
+     * asking若是异步的，会不会导致takeAllEffect在某个调用中过早结束而发生误判，最终出错？
      */
     protected void takeAllEffects() {
         if (!effectChain.isEmpty() || !tempGraveyard.isEmpty() || !eventList.isEmpty()) {
@@ -452,29 +483,21 @@ public class Game {
                     }
                     tempGraveyardSize--;
                 }
+                // 此处清空墓地缓存
             }
             // 此时可能由新的takeEffect导致evenList堆积，或者添加了次生的效果
             asking(host);
+            // 这里是不是应该阻塞等待asking结束？
         }
     }
 
     /**
-     * 临时墓地区域
+     * 临时墓地区域,该区域代表在一组连锁上将要送去墓地的卡片，包括：发动效果而送墓的卡、因为cost而送墓的卡
      */
     protected List<Card> tempGraveyard = new CopyOnWriteArrayList<>();
 
-    /**
-     * 出牌区域
-     */
-    protected List<Card> playArea;
-
-
     public List<Card> getTempGraveyard() {
         return tempGraveyard;
-    }
-
-    public List<Card> getPlayArea() {
-        return playArea;
     }
 
     public List<Card> getGraveyard() {
@@ -541,7 +564,7 @@ public class Game {
      *
      */
     public void pushUpdateMessage(UpdatePushMessage message) {
-        handler.sendMessageToUsers(message);
+        handler.sendMessageToAllUsers(message);
     }
 
     public void pushUpdateMessage(List<Event> events) {
@@ -584,10 +607,6 @@ public class Game {
 
     public Map<Long, Listener<?>> getMap() {
         return map;
-    }
-
-    public ThreadPoolTaskExecutor getTaskExecutor() {
-        return taskExecutor;
     }
 
     public CyclicBarrier getAnswer() {

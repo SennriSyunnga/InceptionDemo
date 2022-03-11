@@ -4,7 +4,7 @@ package cn.sennri.inception.player;
 import cn.sennri.inception.Effect;
 import cn.sennri.inception.card.Card;
 import cn.sennri.inception.field.Deck;
-import cn.sennri.inception.util.Utils;
+import cn.sennri.inception.util.RollUtils;
 
 import java.util.List;
 
@@ -17,7 +17,7 @@ public interface Player {
      * @return
      */
     default int roll(){
-        return Utils.roll();
+        return RollUtils.roll();
     }
 
     /**

@@ -43,7 +43,7 @@ public interface Card {
     /**
      * 每张卡应该有一个效果工厂，用于返回效果
      * 同时每一张卡应该为不同效果置一个计数器，判断是否还可以发动
-     * @param num
+     * @param num   选择卡片中的第几条效果并发动
      * @param targets 复数个效果对象
      * @return
      */

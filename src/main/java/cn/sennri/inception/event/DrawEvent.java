@@ -1,6 +1,11 @@
 package cn.sennri.inception.event;
 
+import lombok.AllArgsConstructor;
+
+@AllArgsConstructor
 public class DrawEvent extends AbstractEvent implements Event{
+    public DrawEvent(){}
+
     /**
      * 抽卡量
      */

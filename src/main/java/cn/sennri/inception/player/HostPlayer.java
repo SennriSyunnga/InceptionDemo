@@ -12,6 +12,8 @@ import org.springframework.web.socket.WebSocketSession;
 public class HostPlayer extends BasePlayer{
     public HostPlayer(Game game, WebSocketSession socketSession, String name) {
         super(game, socketSession, name);
+        // 毋庸置疑
+        this.order = 0;
     }
 
     /**
