@@ -4,7 +4,8 @@ package cn.sennri.inception.player;
 import cn.sennri.inception.Effect;
 import cn.sennri.inception.card.Card;
 import cn.sennri.inception.field.Deck;
-import cn.sennri.inception.util.RollUtils;
+import cn.sennri.inception.util.GameUtils;
+import org.springframework.web.socket.WebSocketSession;
 
 import java.util.List;
 
@@ -17,7 +18,7 @@ public interface Player {
      * @return
      */
     default int roll(){
-        return RollUtils.roll();
+        return GameUtils.roll();
     }
 
     /**
@@ -55,6 +56,8 @@ public interface Player {
     void setOrder(Integer order);
 
     String getName();
+
+    WebSocketSession getSocketSession();
 
     /**
      * 获取当前手卡
@@ -108,6 +111,11 @@ public interface Player {
         return this.getPos().equals(other.getPos());
     }
 
+    default boolean isAlive(){
+        return this.getStatus().equals(StatusEnum.ALIVE);
+    }
+
+    //todo这东西有意义吗？为啥不写boolean？
     enum StatusEnum {
         /**
          * 存活状态

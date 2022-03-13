@@ -12,9 +12,8 @@ import java.util.List;
  * 凭空造物
  */
 public class CreateCardsFromVacant extends AbcCard{
-
     public CreateCardsFromVacant(){
-        super();
+        this.cardName = "凭空造物";
         super.effects = Collections.singletonList(new DrawEffect(this));
     }
 

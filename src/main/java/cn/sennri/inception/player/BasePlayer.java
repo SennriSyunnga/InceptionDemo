@@ -76,6 +76,11 @@ public class BasePlayer implements Player {
     protected WebSocketSession socketSession;
 
     @Override
+    public WebSocketSession getSocketSession() {
+        return socketSession;
+    }
+
+    @Override
     public List<Card> getHandCards() {
         return this.hands;
     }

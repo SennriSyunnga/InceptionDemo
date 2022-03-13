@@ -24,6 +24,8 @@ public interface Card {
         return getEffects().get(num);
     }
 
+    String getCardName();
+
     void setUid(int uid);
 
     int getUid();

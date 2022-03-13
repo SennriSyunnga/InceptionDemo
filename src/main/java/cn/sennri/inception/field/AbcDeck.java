@@ -15,6 +15,11 @@ public abstract class AbcDeck implements Deck{
      */
     protected Card[] uidToCard;
 
+    @Override
+    public Card getCardByUid(int uid){
+        return uidToCard[uid];
+    }
+
     @Deprecated
     protected List<GameFinishedListener> gameFinishedListeners;
 

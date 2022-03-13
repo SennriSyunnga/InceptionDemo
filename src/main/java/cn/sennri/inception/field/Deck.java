@@ -10,6 +10,8 @@ public interface Deck {
     // todo getType
 
 
+    Card getCardByUid(int uid);
+
     /**
      * 返回卡组大小
      * @return

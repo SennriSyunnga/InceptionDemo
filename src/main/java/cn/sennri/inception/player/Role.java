@@ -1,6 +1,6 @@
 package cn.sennri.inception.player;
 
-import cn.sennri.inception.util.RollUtils;
+import cn.sennri.inception.util.GameUtils;
 
 /**
  * 角色卡
@@ -13,7 +13,7 @@ public interface Role {
      * @return
      */
     default int roll(){
-        return RollUtils.roll();
+        return GameUtils.roll();
     }
 
     /**

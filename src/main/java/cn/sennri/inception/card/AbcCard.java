@@ -7,6 +7,13 @@ import java.util.List;
 
 public abstract class AbcCard implements Card{
 
+    protected String cardName;
+
+    @Override
+    public String getCardName() {
+        return cardName;
+    }
+
     protected int uid;
 
     @Override

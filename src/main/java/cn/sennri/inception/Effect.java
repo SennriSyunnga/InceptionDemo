@@ -33,6 +33,8 @@ public interface Effect {
         return isActivable(game);
     }
 
+    String getDescription();
+
     /**
      * 获取效果来源卡片
      * @return

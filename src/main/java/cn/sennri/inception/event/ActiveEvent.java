@@ -1,14 +1,33 @@
 package cn.sennri.inception.event;
 
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+
 /**
  * 该事件在发动方应该在主机得到pass答复后直接结算，而不必让主机再推给他。
  */
+@AllArgsConstructor
+@NoArgsConstructor
 public class ActiveEvent extends AbstractEvent implements Event{
-    int subject;
+    /**
+     * 卡牌的第N个效果
+     */
+    int effectNum;
+
+    /**
+     * 效果主体
+     */
+    Integer subject;
     /**
      * 效果对象 卡 角色 层 或者 无对象
      */
     int[] object;
+
+    /**
+     * 描述对象的类型，是指定玩家，指定墓地卡牌，或者指定其他的东西
+     * todo 应该在Effect当中添加一个TargetType作为校验条件之一
+     */
+    int targetType;
     /**
      * 用以确认卡牌
      */
@@ -18,11 +37,15 @@ public class ActiveEvent extends AbstractEvent implements Event{
      */
     boolean handCardEffect;
 
-    public int getSubject() {
+    public int getEffectNum() {
+        return effectNum;
+    }
+
+    public Integer getSubject() {
         return subject;
     }
 
-    public void setSubject(int subject) {
+    public void setSubject(Integer subject) {
         this.subject = subject;
     }
 
@@ -49,4 +72,5 @@ public class ActiveEvent extends AbstractEvent implements Event{
     public void setHandCardEffect(boolean handCardEffect) {
         this.handCardEffect = handCardEffect;
     }
+
 }

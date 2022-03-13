@@ -10,6 +10,7 @@ import java.util.List;
 
 public class Decrypt extends AbcCard {
     public Decrypt() {
+        this.cardName = "解封";
         this.effects = Arrays.asList(new DecryptEffect(this), new AntiDecryptEffect(this));
     }
 

@@ -4,6 +4,7 @@ import cn.sennri.inception.AbcEffect;
 import cn.sennri.inception.server.Game;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -11,7 +12,8 @@ import java.util.List;
  */
 public class TimeStorm extends AbcCard {
     public TimeStorm(){
-        this.effects = Arrays.asList(new DiscardEffect(this));
+        this.cardName = "时间风暴";
+        this.effects = Collections.singletonList(new DiscardEffect(this));
     }
 
     public static class DiscardEffect extends AbcEffect{

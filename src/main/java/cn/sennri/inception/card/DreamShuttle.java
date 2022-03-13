@@ -7,6 +7,7 @@ import java.util.Arrays;
 
 public class DreamShuttle extends AbcCard {
     public DreamShuttle() {
+        this.cardName = "梦境穿梭剂";
         this.effects = Arrays.asList(new MoveUpEffect(this), new GoDownEffect(this));
     }
 

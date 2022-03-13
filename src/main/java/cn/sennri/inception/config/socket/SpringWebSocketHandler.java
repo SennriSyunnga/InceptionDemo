@@ -18,10 +18,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
@@ -222,18 +219,21 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 给某个用户发送消息
+     * 给个别用户之外的其余用户发送消息
      *
-     * @param userId
-     * @param message
+     * @param exception 例外
+     * @param message   消息
      */
-    public void sendMessageToUser(String userId, Message message) {
-        WebSocketSession session = usersToSessionMap.get(userId);
+    public void sendMessageToUserExcept(Set<WebSocketSession> exception, Message message) {
         try {
-            if (session.isOpen()) {
-                sendMessage(session, message);
-            } else {
-                throw new IllegalStateException("Target session is closed.");
+            for (WebSocketSession session : webSocketSessionPlayerMap.keySet()) {
+                if (!exception.contains(session)) {
+                    if (session.isOpen()) {
+                        sendMessage(session, message);
+                    } else {
+                        throw new IllegalStateException("Target session is closed.");
+                    }
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -241,7 +241,29 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
+     * 给个别用户之外的其余用户发送消息
+     *
+     * @param sessions 例外
+     * @param message   消息
+     */
+    public void sendMessageToUserExcept(Collection<WebSocketSession> sessions, Message message) {
+        try {
+            for (WebSocketSession session : sessions) {
+                if (session.isOpen()) {
+                    sendMessage(session, message);
+                } else {
+                    throw new IllegalStateException("Target session is closed.");
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    /**
      * 向特定的socket发送消息
+     *
      * @param session
      * @param selfDefineMessage
      * @throws IOException
@@ -252,6 +274,7 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
 
     /**
      * 向所有用户发送更新消息
+     *
      * @param message
      */
     public void sendMessageToAllUsers(Message message) {

@@ -108,6 +108,13 @@ public class ClientController {
                     }
                 }else if(m instanceof UpdatePushMessage){
                     fieldView.consumeUpdateMessage((UpdatePushMessage) m);
+                }else if (m instanceof GameOverMessage){
+                    boolean hostWin = ((GameOverMessage) m).getHostWin();
+                    if (hostWin){
+                        log.info("梦主胜利");
+                    }else{
+                        log.info("盗梦阵营胜利");
+                    }
                 }
                 log.debug("Client received message:{}", text);
             }

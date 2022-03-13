@@ -38,6 +38,12 @@ public class TestDeckImpl extends AbcDeck{
             card.setUid(cardUid);
             cardUid++;
         }
+        for(int i = 0;i < 2;i++){
+            Card card = new RoleSwitching();
+            deck.add(card);
+            card.setUid(cardUid);
+            cardUid++;
+        }
         uidToCard = deck.toArray(new Card[0]);
         topIndexPointer = deck.size() - 1;
     }

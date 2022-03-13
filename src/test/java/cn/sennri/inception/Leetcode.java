@@ -9,6 +9,11 @@ public class Leetcode {
         public A(){
             this.type = this.getClass().getSimpleName();
             log.debug(type);
+            C c = this.getC();
+        }
+
+        public C getC(){
+            return new C(this);
         }
 
         public A newInstance() throws InstantiationException {
@@ -22,6 +27,14 @@ public class Leetcode {
     }
 
     public static class B extends A{
+    }
+
+    public static class C {
+        String type;
+        C(A a){
+            this.type = a.type;
+            log.debug(type);
+        }
     }
 
     public static void main(String[] args) throws InterruptedException, InstantiationException {

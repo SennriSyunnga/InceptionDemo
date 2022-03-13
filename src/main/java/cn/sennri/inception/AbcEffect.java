@@ -12,6 +12,16 @@ import cn.sennri.inception.server.Game;
  */
 public abstract class AbcEffect implements Effect {
     /**
+     * 效果的描述条文
+     */
+    public String description;
+
+    @Override
+    public String getDescription() {
+        return description;
+    }
+
+    /**
      * 效果的来源
      */
     protected Card effectSource;

@@ -8,6 +8,7 @@ import cn.sennri.inception.event.*;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.field.DeckImpl;
 import cn.sennri.inception.message.GameOverMessage;
+import cn.sennri.inception.message.ServerStartGameMessage;
 import cn.sennri.inception.message.UpdatePushMessage;
 import cn.sennri.inception.message.UpdatePushMessageImpl;
 import cn.sennri.inception.model.listener.Listener;
@@ -48,6 +49,15 @@ public class Game {
     protected AtomicBoolean gameResult = null;
 
     protected List<Effect> effectChain;
+
+    /**
+     * 需要在回合阶段时结算的卡片效果，如移形换影
+     */
+    protected List<Effect> endPhaseEffects;
+
+    public List<Effect> getEndPhaseEffects() {
+        return endPhaseEffects;
+    }
 
     public List<Effect> getEffectChain() {
         return this.effectChain;
@@ -119,6 +129,8 @@ public class Game {
      */
     public void initializeRole() {
         // 在这里sendRole信息给客户端，并等待应答
+
+        handler.sendMessageToAllUsers(new ServerStartGameMessage(this.getView()));
     }
 
     /**
@@ -173,6 +185,27 @@ public class Game {
             return false;
         }
         return source.revive(target, num);
+    }
+
+    public void shootDead(Player source, Player target){
+        target.setStatus(Player.StatusEnum.LOST);
+        seizeCard(source, target, 2);
+        unPushEvenList.add(new ShootDeadEvent(source.getOrder(),target.getOrder()));
+    }
+
+    public void seizeCard(Player source, Player target, int num){
+        num = Math.min(target.getHandCards().size(), num);
+        //todo 偷卡实现
+        List<Card> targetHandCards = target.getHandCards();
+        List<Card> sourceHandCards = source.getHandCards();;
+        Collections.shuffle(target.getHandCards());
+        int[] cardIds = new int[num];
+        for (int i = 0;i < num;i++){
+            Card card = targetHandCards.remove(0);
+            cardIds[i] = card.getUid();
+            sourceHandCards.add(card);
+        }
+        unPushEvenList.add(new SeizeCardEvent(num, source.getOrder(), target.getOrder(),null));
     }
 
     List<Event> unPushEvenList = new ArrayList<>();
@@ -279,13 +312,21 @@ public class Game {
             unPushEvenList.add(0, endEvent);
             pushUnUpdateMessage();
 
-            // 这里应该从hook里找出要在结束阶段才能发动的效果，然后加入效果栈，移形换影该在这一步执行
-
-            // 结算效果 比如移形换影在这时候结算
+            // 结算效果 比如移形换影在这时候结算 这里通过交换来避免构建新的list
+            List<Effect> temp = effectChain;
+            effectChain = endPhaseEffects;
+            endPhaseEffects = temp;
+            temp = null;
             takeAllEffects();
+            // 易知由于移形换影效果会把自己再次添加到endPhaseEffect栈中
+            endPhaseEffects.clear();
+
+            // 重置当前所有玩家的角色卡计数等回合内信息
+            for (Player p:players){
+                p.refreshItsRole();
+            }
 
             // 这里开始不ask，直接结算。
-            turnOwner.refreshItsRole();
             pointer = pointer.next;
             turnOwner = pointer.getNode();
             this.phase = Phase.DRAW_PHASE;

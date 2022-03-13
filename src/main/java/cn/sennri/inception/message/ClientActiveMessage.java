@@ -1,9 +1,9 @@
 package cn.sennri.inception.message;
 
 /**
- * 客户端发动消息
+ * 客户端发动效果的宣告消息
  */
-public class ClientActiveMessage implements Message{
+public class ClientActiveMessage extends AbstractMessage implements Message{
     @Override
     public Long getMessageId() {
         return messageId;
