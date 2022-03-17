@@ -7,6 +7,7 @@ import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.message.UpdatePushMessage;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
+import cn.sennri.inception.util.GameUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -23,6 +24,8 @@ public class FieldView {
      * 指向自己
      */
     int selfPointer;
+
+    List<Card> myHandCards = new ArrayList<>();
 
     public FieldView(Game game) {
         this.deckRemainNum = game.getDeck().size();
@@ -48,6 +51,7 @@ public class FieldView {
                 break;
             }
         }
+        this.myHandCards = new ArrayList<>();
         this.graveyard = new ArrayList<>();
         this.exclusionZone = new ArrayList<>();
         this.isAsking = new AtomicBoolean(false);
@@ -130,6 +134,25 @@ public class FieldView {
         }
     }
 
+    private Card[] generateCardArray(int[] nums, List<Card> graveyard){
+        int len = nums.length;
+        Card[] cards = new Card[len];
+        for(int i = 0;i < len; i++){
+            cards[i] = graveyard.get(nums[i]);
+        }
+        return cards;
+    }
+
+    private String[] generatePlayerArray(int[] nums, PlayerView[] playerViews){
+        int len = nums.length;
+        String[] playerNames = new String[len];
+        for(int i = 0;i < len; i++){
+            playerNames[i] = playerViews[nums[i]].getName();
+        }
+        return playerNames;
+    }
+
+
     void executeEvent(Event e) {
         if (e instanceof RollEvent) {
             int playerId = ((RollEvent) e).getPlayerId();
@@ -162,54 +185,80 @@ public class FieldView {
             int[] cardIds = ((DiscardEvent) e).getCardIds();
             PlayerView playerView = playerViews[subject];
             playerView.handCardNum -= cardIds.length;
-            for (int id : cardIds) {
-                Card card = deck.getUidToCard()[id];
-                this.graveyard.add(card);
-                this.tempGraveyard.add(card);
-                log.info("玩家{}从手牌弃置了一张{}", playerView.getName(), card.getCardName());
+            if (subject == selfPointer){
+                for (int id : cardIds) {
+                    Card card = deck.getUidToCard()[id];
+                    this.graveyard.add(card);
+                    this.tempGraveyard.add(card);
+                    this.myHandCards.remove(card);
+                    log.info("玩家{}从手牌弃置了一张{}", playerView.getName(), card.getCardName());
+                }
+            }else{
+                for (int id : cardIds) {
+                    Card card = deck.getUidToCard()[id];
+                    this.graveyard.add(card);
+                    this.tempGraveyard.add(card);
+                    log.info("玩家{}从手牌弃置了一张{}", playerView.getName(), card.getCardName());
+                }
             }
             this.eventList.add(e);
         } else if (e instanceof ActiveEvent) {
+            int cardId = ((ActiveEvent) e).getCardUid();
+            // 回调，显示这张卡。
+            Card card = deck.getCardByUid(cardId);
             boolean handCardEffect = ((ActiveEvent) e).isHandCardEffect();
             // 说明由玩家发动的效果
             if (handCardEffect){
                 int subject = ((ActiveEvent) e).getSubject();
                 PlayerView playerView = playerViews[subject];
                 int[] objects = ((ActiveEvent) e).getObject();
-                int cardId = ((ActiveEvent) e).getCardUid();
+
                 int effectNum = ((ActiveEvent) e).getEffectNum();
-                Card card = deck.getCardByUid(cardId);
-                // 回调，显示这张卡。
-                graveyard.add(card);
+
+                Effect effect = card.getEffect(effectNum);
+                effectStack.add(effect);
+                GameUtils.TargetTypeEnum targetType = effect.getTargetType();
+
+                this.graveyard.add(card);
                 this.tempGraveyard.add(card);
+                // 不取对象
                 if(objects == null){
                     log.info("玩家{}从手牌中发动了卡牌{}的效果{}",
                             playerView.getName(),
                             card.getCardName(),
                             card.getEffect(effectNum).getDescription());
                 }else{
-                    log.info("玩家{}以{}为对象从手牌中发动了卡牌{}的效果{}",
-                            playerView.getName(),
-                            objects,
-                            card.getCardName(),
-                            card.getEffect(effectNum).getDescription());
+                    switch (targetType) {
+                        case GRAVEYARD_CARD:
+                            log.info("玩家{}以墓地的{}为对象从手牌中发动了卡牌{}的效果{}",
+                                    playerView.getName(),
+                                    Arrays.toString(generateCardArray(objects, graveyard)),
+                                    card.getCardName(),
+                                    card.getEffect(effectNum).getDescription());
+                            break;
+                        case PLAYER:
+                            log.info("玩家{}以玩家{}为对象从手牌中发动了卡牌{}的效果{}",
+                                    playerView.getName(),
+                                    Arrays.toString(generatePlayerArray(objects, playerViews)),
+                                    card.getCardName(),
+                                    card.getEffect(effectNum).getDescription());
+                            break;
+                        default:
+                    }
                 }
             }else{
                 Integer subject = ((ActiveEvent) e).getSubject();
+                // 没有发动玩家
                 if (subject == null){
-                    // 墓地必发效果
-                    int cardId = ((ActiveEvent) e).getCardUid();
+                    // 必发效果？
                     int effectNum = ((ActiveEvent) e).getEffectNum();
-                    Card card = deck.getCardByUid(cardId);
                     log.info("卡牌{}发动了效果{}",
                             card.getCardName(),
                             card.getEffect(effectNum).getDescription());
                 }else{
                     // 不会送去墓地的效果
                     PlayerView playerView = playerViews[subject];
-                    int cardId = ((ActiveEvent) e).getCardUid();
                     int effectNum = ((ActiveEvent) e).getEffectNum();
-                    Card card = deck.getCardByUid(cardId);
                     log.info("玩家{}发动了卡牌{}的效果{}",
                             playerView.getName(),
                             card.getCardName(),

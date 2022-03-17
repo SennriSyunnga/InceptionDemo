@@ -14,7 +14,7 @@ import java.util.List;
  */
 public class BasePlayer implements Player {
 
-    public Role role;
+    public RoleCard roleCard;
 
     public Game game;
 
@@ -52,7 +52,7 @@ public class BasePlayer implements Player {
         this.status = StatusEnum.ALIVE;
         this.hands = new ArrayList<>();
         this.pos = PositionEnum.ONE;
-        this.role = new BaseRole(this, game);
+        this.roleCard = new BaseRoleCard(this, game);
         this.uid = socketSession.getId();
     }
 
@@ -87,27 +87,27 @@ public class BasePlayer implements Player {
 
     @Override
     public void draw(Deck deck) {
-        hands.add(deck.draw());
+        roleCard.drawInDrawPhase();
     }
 
     @Override
     public void commonDraw() {
-        this.role.commonDraw();
+        this.roleCard.drawInDrawPhase();
     }
 
     @Override
     public boolean discard(int[] cardNum){
-        return this.role.discard(cardNum);
+        return this.roleCard.discard(cardNum);
     }
 
     @Override
     public void awakenBy(Player player){
-        this.role.awakenBy(player);
+        this.roleCard.awakenBy(player);
     }
 
     @Override
     public boolean revive(Player p, int[] num) {
-        return role.revive(p,  num);
+        return roleCard.revive(p,  num);
     }
 
     @Override
@@ -116,13 +116,13 @@ public class BasePlayer implements Player {
     }
 
     @Override
-    public void setRole(Role role) {
-        this.role = role;
+    public void setRole(RoleCard roleCard) {
+        this.roleCard = roleCard;
     }
 
     @Override
-    public Role getRole() {
-        return role;
+    public RoleCard getRole() {
+        return roleCard;
     }
 
     @Override
@@ -157,7 +157,7 @@ public class BasePlayer implements Player {
 
     @Override
     public boolean canShoot(Player other) {
-        return this.role.canShoot(other);
+        return this.roleCard.canShoot(other);
     }
 
     @Override

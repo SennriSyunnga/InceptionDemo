@@ -1,7 +1,10 @@
 package cn.sennri.inception.message;
 
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
 public class ErrorMessage extends AbstractMessage{
-    private final String content;
+    private String content;
     public ErrorMessage(String content){
         this.content = content;
     }

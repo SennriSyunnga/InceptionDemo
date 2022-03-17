@@ -1,13 +1,14 @@
 package cn.sennri.inception.card;
 
 import cn.sennri.inception.Effect;
+import cn.sennri.inception.client.view.FieldView;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
 
 import java.util.List;
 
 /**
- * 应该为卡抽象卡的效果类吗？
+ * 是否应该同时为RoleCard的抽象？
  */
 public interface Card {
     /**
@@ -38,18 +39,8 @@ public interface Card {
 
     /**
      * 抽取卡或者交换控制权时Owner改变
-     * @return 旧拥有者
      */
-    Player setOwner(Player newOwner);
-
-    /**
-     * 每张卡应该有一个效果工厂，用于返回效果
-     * 同时每一张卡应该为不同效果置一个计数器，判断是否还可以发动
-     * @param num   选择卡片中的第几条效果并发动
-     * @param targets 复数个效果对象
-     * @return
-     */
-    Effect activeEffect(int num, Player[] targets);
+    void setOwner(Player newOwner);
 
     /**
      * 仅仅是客户端级别的校验
@@ -65,4 +56,10 @@ public interface Card {
         }
         return false;
     }
+
+    // todo
+    default boolean isActivable(FieldView view){
+        return false;
+    }
+
 }

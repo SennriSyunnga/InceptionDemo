@@ -1,4 +1,4 @@
 package cn.sennri.inception.event;
 
-public class PhaseEndEvent implements Event{
+public class PhaseEndEvent extends AbstractEvent implements Event{
 }

@@ -31,11 +31,7 @@ public class GameController {
     WebSocketHandler webSocketHandler;
 
     private static final Logger logger = LogManager.getLogger(GameController.class.getName());
-    Game game;
 
-    CyclicBarrier gameEndBarrier;
-
-    AtomicInteger deck = new AtomicInteger(1);
 
     public GameController() throws UnknownHostException {
     }
@@ -57,51 +53,6 @@ public class GameController {
     AtomicBoolean lobbyBusy;
 
     final Map<InetAddress, AtomicBoolean> addressMap = new ConcurrentHashMap<>(MAX_PLAYER);
-
-    /**
-     * 应该设置为异步方法
-     */
-//    void createLobby(){
-//        if (lobbyBusy != null){
-//            logger.warn("Lobby already exists");
-//            return;
-//        }
-//        lobbyBusy = new AtomicBoolean(false);
-//        // 若没有被quit
-//        while (lobbyBusy != null){
-//            boolean allClear = false;
-//            while (!allClear){
-//                allClear = true;
-//                for(AtomicBoolean ready:addressMap.values()){
-//                    if (!ready.get()){
-//                        allClear = false;
-//                        break;
-//                    }
-//                }
-//                try {
-//                    TimeUnit.MILLISECONDS.sleep(500);
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//            lobbyBusy.set(true);
-//
-//            List<InetAddress> list = new ArrayList<>(addressMap.keySet());
-//
-//            game = new Game(list);
-//            CompletableFuture.runAsync(new Runnable() {
-//                @Override
-//                public void run() {
-//                    try {
-//                        game.start();
-//                    } catch (BrokenBarrierException | InterruptedException | ExecutionException e) {
-//                        e.printStackTrace();
-//                    }
-//                    lobbyBusy.set(false);
-//                }
-//            });
-//        }
-//    }
 
     /**
      * 进入房间

@@ -224,7 +224,7 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
      * @param exception 例外
      * @param message   消息
      */
-    public void sendMessageToUserExcept(Set<WebSocketSession> exception, Message message) {
+    public void sendMessageToUserExcept(Collection<WebSocketSession> exception, Message message) {
         try {
             for (WebSocketSession session : webSocketSessionPlayerMap.keySet()) {
                 if (!exception.contains(session)) {
@@ -241,12 +241,12 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 给个别用户之外的其余用户发送消息
+     * 给个别用户发送消息, 用于发送隐私内容，如私下交换卡名。
      *
-     * @param sessions 例外
+     * @param sessions 选项
      * @param message   消息
      */
-    public void sendMessageToUserExcept(Collection<WebSocketSession> sessions, Message message) {
+    public void sendMessageToCertainUser(Collection<WebSocketSession> sessions, Message message) {
         try {
             for (WebSocketSession session : sessions) {
                 if (session.isOpen()) {
@@ -284,7 +284,7 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
                 if (webSocketSession.isOpen()) {
                     sendMessage(webSocketSession, message);
                 } else {
-                    logger.warn("{} is offline.", e.getKey());
+                    logger.warn("玩家{}客户端已离线.", e.getKey());
                 }
             } catch (IOException ex) {
                 ex.printStackTrace();

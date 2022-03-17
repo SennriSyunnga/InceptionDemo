@@ -1,5 +1,6 @@
 package cn.sennri.inception.player;
 
+import cn.sennri.inception.card.Card;
 import cn.sennri.inception.util.GameUtils;
 
 /**
@@ -7,7 +8,7 @@ import cn.sennri.inception.util.GameUtils;
  * draw行为应该下发到下面这个Role来代为实现。
  * 这里应该定义一些永续效果，设置与记录回调等
  */
-public interface Role {
+public interface RoleCard extends Card {
     /**
      * 产生roll点结果
      * @return
@@ -25,7 +26,7 @@ public interface Role {
     }
 
     /**
-     * 被重生，在这里触发相应记录
+     * 被重生，在这里触发相应回调或者执行计数
      * @param player
      */
     void awakenBy(Player player);
@@ -39,7 +40,7 @@ public interface Role {
     /**
      * 抽牌阶段抽卡
      */
-    void commonDraw();
+    void drawInDrawPhase();
 
     /**
      * 弃牌

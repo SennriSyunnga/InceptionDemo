@@ -1,10 +1,14 @@
 package cn.sennri.inception.client.controller;
 
 import cn.sennri.inception.client.view.FieldView;
+import cn.sennri.inception.event.Event;
+import cn.sennri.inception.event.PhaseEndEvent;
+import cn.sennri.inception.event.TurnEndEvent;
 import cn.sennri.inception.message.*;
 import cn.sennri.inception.model.listener.Listener;
 import cn.sennri.inception.model.vo.ResponseBodyImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
@@ -14,6 +18,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -79,17 +85,17 @@ public class ClientController {
                     e.printStackTrace();
                     // todo 如果这里是阻塞消息，是不时应该在这个地方通知对方失败了，防止接着阻塞？
                 }
-                if (m instanceof ErrorMessage){
+                if (m instanceof ErrorMessage) {
                     ErrorMessage em = (ErrorMessage) m;
-                    log.error("");
+                    log.error("发生错误，错误内容为:{}", em.getContent());
                     return;
                 }
-                if (fieldView == null){
+                if (fieldView == null) {
                     if (m instanceof ServerStartGameMessage) {
                         ServerStartGameMessage message = (ServerStartGameMessage) m;
                         fieldView = message.getFiledView();
                         fieldView.initialize(name);
-                    }else{
+                    } else {
                         log.error("状态不一致");
                     }
                     return;
@@ -101,18 +107,18 @@ public class ClientController {
                     Listener<Boolean> booleanListener = (Listener<Boolean>) map.remove(id);
                     // todo 这里可不可能存在应答回来时， 消息已经消费完的可能？
                     // 可能 前一条消息应答过长，重连了一次
-                    if (booleanListener!=null){
+                    if (booleanListener != null) {
                         booleanListener.setBlocking(true);
-                    }else{
+                    } else {
                         log.debug("Message id{} is consumed already", id);
                     }
-                }else if(m instanceof UpdatePushMessage){
+                } else if (m instanceof UpdatePushMessage) {
                     fieldView.consumeUpdateMessage((UpdatePushMessage) m);
-                }else if (m instanceof GameOverMessage){
+                } else if (m instanceof GameOverMessage) {
                     boolean hostWin = ((GameOverMessage) m).getHostWin();
-                    if (hostWin){
+                    if (hostWin) {
                         log.info("梦主胜利");
-                    }else{
+                    } else {
                         log.info("盗梦阵营胜利");
                     }
                 }
@@ -138,9 +144,9 @@ public class ClientController {
             }
         });
         Response res = responseListener.getBlocking();
-        if (HttpStatus.SWITCHING_PROTOCOLS.value() == res.code()){
+        if (HttpStatus.SWITCHING_PROTOCOLS.value() == res.code()) {
             return ResponseBodyImpl.createNewResponse(res, HttpStatus.OK, "连接成功，已注册到服务器中");
-        }else{
+        } else {
             return ResponseBodyImpl.createNewResponse(res, HttpStatus.CONFLICT);
         }
         // 这里应该阻塞地等待当前open是否成功。
@@ -168,7 +174,7 @@ public class ClientController {
      * 获取消息的版本号，如果到达long极限值，则清空至0L
      * @return
      */
-    private long getMessageNum(){
+    private long getMessageNum() {
         return messageNum.getAndUpdate(o -> o == Long.MAX_VALUE ? 0 : o + 1);
     }
 

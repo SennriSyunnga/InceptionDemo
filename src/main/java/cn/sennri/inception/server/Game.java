@@ -15,11 +15,12 @@ import cn.sennri.inception.model.listener.Listener;
 import cn.sennri.inception.player.BasePlayer;
 import cn.sennri.inception.player.HostPlayer;
 import cn.sennri.inception.player.Player;
-import cn.sennri.inception.player.Role;
+import cn.sennri.inception.player.RoleCard;
+import cn.sennri.inception.util.GameUtils;
 import cn.sennri.inception.util.ListNode;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.socket.WebSocketSession;
 
+import javax.validation.constraints.NotNull;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -152,6 +153,11 @@ public class Game {
         this.secret = secret;
     }
 
+    /**
+     * todo 考虑放到controller层
+     * @param p
+     * @return
+     */
     public boolean drawInDrawPhase(Player p) {
         // 这里实现hook，添加游戏事件或者触发listener
         if (p.equals(turnOwner) && phase.equals(Phase.DRAW_PHASE)) {
@@ -161,6 +167,8 @@ public class Game {
             // 结算抽卡引发的次生效果，这里会进行一个ask;
             takeAllEffects();
             // 这里增加一个回合切换Event 要不抽象为效果
+
+
             asking(turnOwner);
             return true;
         } else {
@@ -170,13 +178,15 @@ public class Game {
     }
 
     /**
-     * 游戏复活接口
+     * 游戏复活接口 考虑移到controller
+     * controller → player → role → game 这样的设计？
      * @param source
      * @param targetNum
      * @param num
      * @return
      */
     public boolean revive(Player source, int targetNum, int[] num) {
+        // 被复活的玩家
         Player target = players[targetNum];
         if (target.getStatus().equals(Player.StatusEnum.ALIVE)) {
             return false;
@@ -184,36 +194,63 @@ public class Game {
         if (turnOwner != source) {
             return false;
         }
-        return source.revive(target, num);
+        // 这里发生次生弃牌事件
+        if (source.revive(target, num)) {
+            return false;
+        }
+        return true;
     }
 
-    public void shootDead(Player source, Player target){
+    public void playerRevive(Player source, Player target) {
+        unPushEvenList.add(new ReviveEvent(source.getOrder(), target.getOrder()));
+    }
+
+    public void playerAwaken(Player awakenPlayer, Player.PositionEnum positionEnum) {
+        awakenPlayer.setPos(positionEnum);
+        awakenPlayer.setStatus(Player.StatusEnum.ALIVE);
+        unPushEvenList.add(new AwakenEvent(awakenPlayer.getOrder(), positionEnum));
+    }
+
+
+    /**
+     * 发生击杀结果
+     * @param source
+     * @param target
+     */
+    public void shootDead(Player source, Player target) {
         target.setStatus(Player.StatusEnum.LOST);
         seizeCard(source, target, 2);
-        unPushEvenList.add(new ShootDeadEvent(source.getOrder(),target.getOrder()));
+        unPushEvenList.add(new ShootDeadEvent(source.getOrder(), target.getOrder()));
     }
 
-    public void seizeCard(Player source, Player target, int num){
-        num = Math.min(target.getHandCards().size(), num);
+    /**
+     * todo
+     * @param source
+     * @param target
+     * @param num
+     */
+    public void seizeCard(Player source, Player target, int num) {
+        int remainHandCardSize = target.getHandCards().size();
+        num = Math.min(remainHandCardSize, num);
         //todo 偷卡实现
         List<Card> targetHandCards = target.getHandCards();
-        List<Card> sourceHandCards = source.getHandCards();;
-        Collections.shuffle(target.getHandCards());
-        int[] cardIds = new int[num];
-        for (int i = 0;i < num;i++){
-            Card card = targetHandCards.remove(0);
-            cardIds[i] = card.getUid();
+        List<Card> sourceHandCards = source.getHandCards();
+        //
+        int[] cardNumToSeize = GameUtils.getRandomAscendNumArray2(remainHandCardSize, num);
+        for (int i = cardNumToSeize.length - 1; i >= 0; i--) {
+            // 从大到小取牌，保证num不会变化
+            Card card = targetHandCards.remove(cardNumToSeize[i]);
             sourceHandCards.add(card);
         }
-        unPushEvenList.add(new SeizeCardEvent(num, source.getOrder(), target.getOrder(),null));
+        unPushEvenList.add(new SeizeCardEvent(source.getOrder(), target.getOrder(), cardNumToSeize));
     }
 
-    List<Event> unPushEvenList = new ArrayList<>();
+    protected List<Event> unPushEvenList = new ArrayList<>();
 
     /**
      * 本回合使用并且送去墓地的卡由该表维护
      */
-    List<Card> usedCardInThisTurn = new ArrayList<>();
+    protected List<Card> usedCardInThisTurn = new ArrayList<>();
 
     /**
      * 发动手牌效果接口
@@ -238,6 +275,7 @@ public class Game {
 
             ActiveEvent activeEvent = new ActiveEvent();
             activeEvent.setCardUid(card.getUid());
+            activeEvent.setEffectNum(num);
             activeEvent.setObject(targets);
             activeEvent.setSubject(source.getOrder());
             activeEvent.setHandCardEffect(card.getOwner() != null);
@@ -259,19 +297,42 @@ public class Game {
 
 
     /**
+     * 从墓地中取牌
+     * @param player
+     * @param cardIndices
+     */
+    public void playerPickCardFromGraveyard(Player player, int[] cardIndices){
+        List<Card> handCards = player.getHandCards();
+        int size = graveyard.size();
+        if (cardIndices.length > size){
+            throw new IllegalArgumentException();
+        }
+        Arrays.sort(cardIndices);
+        for(int i = cardIndices.length - 1; i >= 0; i--){
+            int index = cardIndices[i];
+            Card card = graveyard.remove(index);
+            handCards.add(card);
+        }
+        // todo
+    }
+
+    /**
      * nums的顺序在Role的discard里做实现
      * 这里负责加even
      * @param p
-     * @param nums
+     * @param nums  nums应该是一个由小到大的序列
      */
     public void discard(Player p, int[] nums) {
         List<Card> handCards = p.getHandCards();
         // 在这里加入event
-        for (int n : nums) {
+        int[] cardIds = new int[nums.length];
+        for (int i = nums.length - 1; i >= 0; i--) {
+            int n = nums[i];
             Card c = handCards.remove(n);
             tempGraveyard.add(c);
             graveyard.add(c);
         }
+        unPushEvenList.add(new DiscardEvent(p.getOrder(), cardIds));
     }
 
     /**
@@ -322,7 +383,7 @@ public class Game {
             endPhaseEffects.clear();
 
             // 重置当前所有玩家的角色卡计数等回合内信息
-            for (Player p:players){
+            for (Player p : players) {
                 p.refreshItsRole();
             }
 
@@ -349,7 +410,7 @@ public class Game {
     public void deckAbandonCard(int times) {
         int[] cardIds = new int[times];
         for (int i = 0; i < times; i++) {
-            if (deck.size() == 0){
+            if (deck.size() == 0) {
                 gameOver(true);
             }
             Card card = deck.remove();
@@ -366,11 +427,12 @@ public class Game {
      * @param drawTimes 抽卡次数
      */
     public void drawDeck(Player player, int drawTimes) {
-        for (int i = 0;i < drawTimes;i++){
-            if (deck.size() == 0){
+        for (int i = 0; i < drawTimes; i++) {
+            if (deck.size() == 0) {
                 gameOver(true);
             }
-            player.draw(deck);
+            Card card = this.deck.draw();
+            player.getHandCards().add(card);
         }
         DrawEvent drawEvent = new DrawEvent();
         unPushEvenList.add(drawEvent);
@@ -380,7 +442,7 @@ public class Game {
      * 游戏结束调用这个
      * @param hostPlayerWin 游戏结束时是否梦主获胜
      */
-    public void gameOver(boolean hostPlayerWin){
+    public void gameOver(boolean hostPlayerWin) {
         handler.sendMessageToAllUsers(new GameOverMessage(hostPlayerWin));
     }
 
@@ -494,6 +556,7 @@ public class Game {
     protected AtomicBoolean isAsking = new AtomicBoolean(false);
 
     /**
+     * 在这里会清理EventList
      * 设计上，不会同时执行同步块中的方法，但是可能由于askingHost造成递归。当然，askingHost是异步的，
      * asking若是异步的，会不会导致takeAllEffect在某个调用中过早结束而发生误判，最终出错？
      */
@@ -504,6 +567,8 @@ public class Game {
             synchronized (this) {
                 // 该由这一组event引发的效果已经发动完了，应当结算掉这组event
                 eventList.clear();
+                // todo send clean message
+
                 // 若不为空
                 while (lastChainIndex > 0) {
                     Effect e = effectChain.remove(lastChainIndex);
@@ -560,7 +625,7 @@ public class Game {
             return false;
         } else {
             // 这里的实现不完全正确;但是由于host角色不存在非回合方的效果，shoot行为不使用role实现，回合外效果主要通过场地卡来执行，因此暂且保留这个实现。
-            Role r = here.getRole();
+            RoleCard r = here.getRole();
             here.setRole(there.getRole());
             there.setRole(r);
         }
@@ -587,9 +652,6 @@ public class Game {
         }
     }
 
-    /**
-     * @return if host wins
-     */
     public void start() {
         this.statusEnum = GameStatusEnum.PLAYING;
     }
@@ -601,17 +663,20 @@ public class Game {
         unPushEvenList.clear();
     }
 
-    /**
-     *
-     */
-    public void pushUpdateMessage(UpdatePushMessage message) {
+    private void pushUpdateMessage(UpdatePushMessage message) {
         handler.sendMessageToAllUsers(message);
     }
 
-    public void pushUpdateMessage(List<Event> events) {
-        UpdatePushMessage updatePushMessage = new UpdatePushMessageImpl();
-        updatePushMessage.setEventList(events);
-        pushUpdateMessage(updatePushMessage);
+    /**
+     *
+     * @param events    非null,如果推送unPushMessage则event List肯定实例化了
+     */
+    public void pushUpdateMessage(@NotNull List<Event> events) {
+        if (events.size() > 0) {
+            UpdatePushMessage updatePushMessage = new UpdatePushMessageImpl();
+            updatePushMessage.setEventList(events);
+            pushUpdateMessage(updatePushMessage);
+        }
     }
 
     public Phase getPhase() {

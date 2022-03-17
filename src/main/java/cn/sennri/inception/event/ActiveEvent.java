@@ -1,5 +1,6 @@
 package cn.sennri.inception.event;
 
+import cn.sennri.inception.util.GameUtils;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 
@@ -23,11 +24,23 @@ public class ActiveEvent extends AbstractEvent implements Event{
      */
     int[] object;
 
+    public void setEffectNum(int effectNum) {
+        this.effectNum = effectNum;
+    }
+
+    public GameUtils.TargetTypeEnum getTargetType() {
+        return targetType;
+    }
+
+    public void setTargetType(GameUtils.TargetTypeEnum targetType) {
+        this.targetType = targetType;
+    }
+
     /**
      * 描述对象的类型，是指定玩家，指定墓地卡牌，或者指定其他的东西
      * todo 应该在Effect当中添加一个TargetType作为校验条件之一
      */
-    int targetType;
+    GameUtils.TargetTypeEnum targetType;
     /**
      * 用以确认卡牌
      */

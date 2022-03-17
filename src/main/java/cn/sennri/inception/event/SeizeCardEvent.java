@@ -6,15 +6,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SeizeCardEvent extends AbstractEvent{
-    int num;
     int toPlayerId;
     int fromPlayerId;
-    int[] cardIds;
-
-    public int getNum() {
-        return num;
-    }
-
+    int[] cardNum;
     public int getToPlayerId() {
         return toPlayerId;
     }
@@ -23,7 +17,7 @@ public class SeizeCardEvent extends AbstractEvent{
         return fromPlayerId;
     }
 
-    public int[] getCardIds() {
-        return cardIds;
+    public int[] getCardNum() {
+        return cardNum;
     }
 }

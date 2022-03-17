@@ -28,18 +28,6 @@ public class CreateCardsFromVacant extends AbcCard{
 
 
     /**
-     * 每张卡应该有一个效果工厂，用于返回效果
-     * 同时每一张卡应该为不同效果置一个计数器，判断是否还可以发动
-     * @param num
-     * @param targets 复数个效果对象
-     * @return
-     */
-    @Override
-    public cn.sennri.inception.Effect activeEffect(int num, Player[] targets) {
-        return null;
-    }
-
-    /**
      *
      */
     public final static class DrawEffect extends AbcEffect {

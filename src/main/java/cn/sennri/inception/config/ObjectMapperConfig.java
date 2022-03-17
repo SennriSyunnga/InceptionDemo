@@ -1,5 +1,6 @@
 package cn.sennri.inception.config;
 
+import cn.sennri.inception.event.Event;
 import cn.sennri.inception.message.*;
 import cn.sennri.inception.util.ClassUtils;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -7,7 +8,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,8 +17,6 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Set;
 import java.util.TimeZone;
 
 
@@ -69,9 +67,18 @@ public class ObjectMapperConfig {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
 
         // 多态支持
-        Collection<Class<?>> classes = ClassUtils.getClasses(
-                org.apache.commons.lang3.ClassUtils.getPackageName(Message.class));
-        objectMapper.registerSubtypes(classes);
+        registerPackage(objectMapper, Message.class);
+        registerPackage(objectMapper, Event.class);
         return objectMapper;
+    }
+
+    /**
+     * 向ObjectMapper里登记所有子类
+     * @param objectMapper
+     * @param clazz
+     */
+    public static void registerPackage(ObjectMapper objectMapper,  Class<?> clazz){
+        Collection<Class<?>> classes = ClassUtils.getAllClassesInTheSamePackage(clazz);
+        objectMapper.registerSubtypes(classes);
     }
 }

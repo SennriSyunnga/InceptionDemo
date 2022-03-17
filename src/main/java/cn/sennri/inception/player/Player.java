@@ -75,7 +75,7 @@ public interface Player {
      */
     String getUid();
 
-    default void setRole(Role role){
+    default void setRole(RoleCard roleCard){
 
     }
 
@@ -93,7 +93,7 @@ public interface Player {
         this.getRole().refresh();
     }
 
-    default Role getRole(){return null;}
+    default RoleCard getRole(){return null;}
 
     /**
      * 发动效果并指定对象

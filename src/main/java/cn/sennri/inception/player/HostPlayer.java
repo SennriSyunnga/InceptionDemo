@@ -14,6 +14,7 @@ public class HostPlayer extends BasePlayer{
         super(game, socketSession, name);
         // 毋庸置疑
         this.order = 0;
+        this.roleCard = new HostRoleCard(this, game);
     }
 
     /**
@@ -25,18 +26,4 @@ public class HostPlayer extends BasePlayer{
         return Math.max(super.rollShootResult() - 1, 1);
     }
 
-    /**
-     * 无条件复活
-     * @param p
-     * @param num
-     * @return
-     */
-    @Override
-    public boolean revive(Player p, int[] num) {
-        if (p.equals(this)){
-            this.awakenBy(p);
-            return true;
-        }
-        return super.revive(p, num);
-    }
 }

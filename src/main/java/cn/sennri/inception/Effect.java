@@ -3,6 +3,7 @@ package cn.sennri.inception;
 import cn.sennri.inception.card.Card;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
+import cn.sennri.inception.util.GameUtils;
 
 /**
  * 效果接口
@@ -71,4 +72,10 @@ public interface Effect {
      * 无效化
      */
     void setDeactivated();
+
+    /**
+     * 默认效果没有对象
+     * @return 效果对象类型，结合targets来正确处理数组内容
+     */
+    default GameUtils.TargetTypeEnum getTargetType(){return GameUtils.TargetTypeEnum.NONE;}
 }

@@ -202,3 +202,24 @@ eventList表示在一组连锁上所有发生的事件。
 尝试数次后，则无视此次的推送失败。
 remove掉本地的listener
 如果对方返回错误，例如状态不一致的错误，则通过push全景View覆盖对方的本地view来保证状态的一致。
+
+# 重构
+game在目前的设计中，既充当handle操作Player的媒介
+又是底层的一些原子性操作的载体。
+理论上，game承载着维护游戏的主要信息，参与方，当前回合主、询问等诸多信息的任务，
+负责容纳没有被推送出去的Event，
+各个行为首先经过player 再转发至 roleCard，是为了使得role能够触发对应的回调。因为角色的不同，造成实际执行行为的不同。
+底层经过game，是为了让game能够将该事件增加到“未推送事件”的列表。
+我们以一个revive事件为例，
+目前实际上是 handle → game.revive1 → A player.reviveB →  roleCard.reviveB → B player.awaken → B roleCard.awaken → game.awaken
+
+计划中应该设计成这样：
+handle → controller.revive A B→ 分发给Player → A player.reviveB → roleCard.reviveB → B player.awaken → B roleCard.awaken →  触发被动
+                                                                    ↓      ↓                                ↓
+                                                            game.discard  game.revive                game.awaken
+                                                                    ↓      ↓                                ↓
+                                                          PlayerA.discard                         B player.setStatus(LIVE)
+                                                          
+                                                          
+                                                          
+player 的所有操作都不操作自身。而是代理到role当中， role的行为是game 的原子性事件的 拼合

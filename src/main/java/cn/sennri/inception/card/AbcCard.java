@@ -40,10 +40,9 @@ public abstract class AbcCard implements Card{
     }
 
     @Override
-    public Player setOwner(Player newOwner){
+    public void setOwner(Player newOwner){
         Player originalOwner = owner;
         this.owner = newOwner;
-        return originalOwner;
     }
 
     @Override
@@ -51,8 +50,4 @@ public abstract class AbcCard implements Card{
         return this.effects;
     }
 
-    @Override
-    public Effect activeEffect(int num, Player[] targets){
-        return effects.get(num);
-    }
 }
