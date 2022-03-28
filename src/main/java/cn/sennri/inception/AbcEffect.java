@@ -25,10 +25,6 @@ public abstract class AbcEffect implements Effect {
      * 效果的来源
      */
     protected Card effectSource;
-    /**
-     * 卡片指定的效果对象
-     */
-    protected Player[] targetPlayers;
 
     /**
      * 卡片指定的效果对象
@@ -38,8 +34,6 @@ public abstract class AbcEffect implements Effect {
      * 是否被康
      */
     protected boolean deactivated = false;
-
-    protected int maxCount;
 
     /**
      * 回合已发动次数
@@ -61,12 +55,13 @@ public abstract class AbcEffect implements Effect {
         this.targets = targets;
     }
 
-    //void setTargets(Player[] targets);
-
     public AbcEffect(Card effectSource) {
         this.effectSource = effectSource;
     }
 
+    /**
+     * 重置计数信息
+     */
     public void refresh() {
         this.activeCount = 0;
         this.deactivated = false;
@@ -112,5 +107,14 @@ public abstract class AbcEffect implements Effect {
     @Override
     public void setDeactivated() {
         this.deactivated = true;
+    }
+
+
+    /**
+     * 用来统计发动次数
+     */
+    public void active(Player player, int[] targets) {
+        setSourcePlayer(player);
+        setTargets(targets);
     }
 }

@@ -14,37 +14,28 @@ public class ResponseBodyImpl<T> {
     private String msg;
 
     public static <T> ResponseBodyImpl<T> createNewResponse(T data, HttpStatus status) {
-        ResponseBodyImpl<T> responseBodyImpl = createNewResponse(status);
-        responseBodyImpl.setData(data);
-        return responseBodyImpl;
+        return createNewResponse(data, status.value(), status.getReasonPhrase());
     }
 
     public static <T> ResponseBodyImpl<T> createNewResponse(HttpStatus status) {
-        ResponseBodyImpl<T> responseBodyImpl = new ResponseBodyImpl<>();
-        responseBodyImpl.setCode(status.value());
-        responseBodyImpl.setMsg(status.getReasonPhrase());
-        return responseBodyImpl;
+        return createNewResponse(null, status.value(), status.getReasonPhrase());
     }
 
     public static <T> ResponseBodyImpl<T> createNewResponse(HttpStatus status, String selfDefinedMsg) {
-        ResponseBodyImpl<T> responseBodyImpl = createNewResponse(status);
-        responseBodyImpl.setMsg(selfDefinedMsg);
-        return responseBodyImpl;
+        return createNewResponse(null, status.value(), selfDefinedMsg);
     }
 
 
-    public static <T> ResponseBodyImpl<T> createNewResponse(T data, int selfDefinedCode, String selfDefinedMsg) {
+    public static <T> ResponseBodyImpl<T> createNewResponse(T data, int code, String msg) {
         ResponseBodyImpl<T> responseBodyImpl = new ResponseBodyImpl<>();
-        responseBodyImpl.setCode(selfDefinedCode);
-        responseBodyImpl.setMsg(selfDefinedMsg);
+        responseBodyImpl.setCode(code);
+        responseBodyImpl.setMsg(msg);
         responseBodyImpl.setData(data);
         return responseBodyImpl;
     }
 
     public static <T> ResponseBodyImpl<T> createNewResponse(T data, HttpStatus status, String selfDefinedMsg) {
-        ResponseBodyImpl<T> response = createNewResponse(status, selfDefinedMsg);
-        response.setData(data);
-        return response;
+        return createNewResponse(data, status.value(),  selfDefinedMsg);
     }
 
 

@@ -1,11 +1,12 @@
 package cn.sennri.inception.client.view;
 
+import cn.sennri.inception.GameInfo;
 import cn.sennri.inception.player.Player;
 
 /**
  * client端可以看见的内容信息
  */
-public class PlayerView {
+public class PlayerView implements GameInfo.PlayerInfo {
 
     public PlayerView(Player p){
         this.uid = p.getUid();
@@ -107,4 +108,6 @@ public class PlayerView {
     public void setRole(int role) {
         this.role = role;
     }
+
+
 }

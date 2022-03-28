@@ -15,7 +15,7 @@
     <Loggers>
         <!--在ide调试时使用-->
         <!--设定com.nd.warehouse.*包中的logger,等级为info-->
-        <Logger name="cn.sennri" level="debug" additivity="false">
+        <Logger name="cn.sennri" level="info" additivity="false">
             <AppenderRef ref="console"/>
         </Logger>
         <!--设定其他包中的logger,等级为warn,info,error-->
@@ -23,13 +23,5 @@
             <AppenderRef ref="console"/>
         </Root>
 
-        <!--&lt;!&ndash;设定cn.fzidt.solar.fate.*包中的logger,等级为info&ndash;&gt;-->
-        <!--<Logger name="cn.fzidt.solar.fate" level="info" additivity="false">-->
-            <!--<AppenderRef ref="RollingFile"/>-->
-        <!--</Logger>-->
-        <!--&lt;!&ndash;设定其他包中的logger,等级为warn&ndash;&gt;-->
-        <!--<Root level="warn">-->
-            <!--<AppenderRef ref="RollingFile"/>-->
-        <!--</Root>-->
     </Loggers>
 </Configuration>

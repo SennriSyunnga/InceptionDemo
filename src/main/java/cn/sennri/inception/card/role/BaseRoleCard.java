@@ -1,7 +1,8 @@
-package cn.sennri.inception.player;
+package cn.sennri.inception.card.role;
 
 import cn.sennri.inception.card.AbcCard;
 import cn.sennri.inception.card.Card;
+import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
 
 import java.util.Arrays;
@@ -68,6 +69,7 @@ public class BaseRoleCard extends AbcCard implements RoleCard {
      */
     public void draw(int times) {
         game.drawDeck(owner, times);
+        // 这里应该根据结果发动具体效果
     }
 
     @Override

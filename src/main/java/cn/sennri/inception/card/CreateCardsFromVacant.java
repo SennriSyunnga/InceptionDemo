@@ -1,7 +1,7 @@
 package cn.sennri.inception.card;
 
 import cn.sennri.inception.AbcEffect;
-import cn.sennri.inception.field.Deck;
+import cn.sennri.inception.Effect;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
 
@@ -22,10 +22,9 @@ public class CreateCardsFromVacant extends AbcCard{
      * @return
      */
     @Override
-    public List<cn.sennri.inception.Effect> getEffects() {
+    public List<Effect> getEffects() {
         return super.effects;
     }
-
 
     /**
      *
@@ -42,17 +41,7 @@ public class CreateCardsFromVacant extends AbcCard{
         public void takeEffect(Game game) {
             Card c = this.getEffectSource();
             Player source = c.getOwner();
-            Deck deck = game.getDeck();
-            List<Card> handCards = source.getHandCards();
-            for (int i = 0;i < 2;i++){
-                Card card = deck.draw();
-                if (card == null){
-                    // do sth;
-                    return;
-                }
-                card.setOwner(source);
-                handCards.add(card);
-            }
+            source.draw(2);
         }
     }
 

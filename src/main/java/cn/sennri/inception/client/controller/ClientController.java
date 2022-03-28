@@ -97,6 +97,7 @@ public class ClientController {
                         fieldView.initialize(name);
                     } else {
                         log.error("状态不一致");
+                        // todo
                     }
                     return;
                 }

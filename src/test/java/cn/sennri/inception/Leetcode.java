@@ -1,6 +1,7 @@
 package cn.sennri.inception;
 
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Test;
 
 @Slf4j
 public class Leetcode {
@@ -43,6 +44,4 @@ public class Leetcode {
         A bbb = b.newInstance();
         return;
     }
-
-
 }

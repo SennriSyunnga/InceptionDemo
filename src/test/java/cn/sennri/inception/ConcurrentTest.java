@@ -9,7 +9,6 @@ public class ConcurrentTest {
     /**
      * 支持动态去除元素
      */
-    @Test
     public void testMap(){
         Map<Integer, Integer> map = new HashMap<>();
         map.put(1,1);

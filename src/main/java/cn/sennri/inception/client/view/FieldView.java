@@ -1,9 +1,13 @@
 package cn.sennri.inception.client.view;
 
 import cn.sennri.inception.Effect;
+import cn.sennri.inception.GameInfo;
 import cn.sennri.inception.card.Card;
 import cn.sennri.inception.event.*;
 import cn.sennri.inception.field.Deck;
+import cn.sennri.inception.message.EffectChainCleanMessage;
+import cn.sennri.inception.message.Message;
+import cn.sennri.inception.message.ServerEventCleanMessage;
 import cn.sennri.inception.message.UpdatePushMessage;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
@@ -16,10 +20,10 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 场上的总体信息
+ * 客户端可见的场上的总体信息
  */
 @Slf4j
-public class FieldView {
+public class FieldView implements GameInfo {
     /**
      * 指向自己
      */
@@ -123,9 +127,18 @@ public class FieldView {
     /**
      * 本次连锁上的事件
      */
-    List<Event> eventList;
+    public List<Event> eventList;
 
     Deck deck;
+
+    public void consumeMessage(Message m){
+        if (m instanceof ServerEventCleanMessage){
+            this.eventList.clear();
+        }else if (m instanceof EffectChainCleanMessage){
+            this.effectStack.clear();
+        }
+    }
+
 
     public void consumeUpdateMessage(UpdatePushMessage m) {
         List<Event> newEvenList = m.getEventList();
@@ -271,5 +284,71 @@ public class FieldView {
             this.phase = Game.Phase.DRAW_PHASE;
             this.eventList.clear();
         }
+    }
+
+
+    @Override
+    public int getDeckRemainNum() {
+        return deckRemainNum;
+    }
+
+    @Override
+    public List<Card> getGraveyard() {
+        return graveyard;
+    }
+
+    @Override
+    public List<Card> getExclusionZone() {
+        return exclusionZone;
+    }
+
+    @Override
+    public List<PlayerInfo> getPlayerInfo() {
+        return Arrays.asList(playerViews);
+    }
+
+    @Override
+    public Game.Phase getPhase() {
+        return phase;
+    }
+
+    @Override
+    public int getTurnOwner() {
+        return turnOwner;
+    }
+
+    @Override
+    public AtomicBoolean getIsAsking() {
+        return isAsking;
+    }
+
+    @Override
+    public int getAskingPlayer() {
+        return askingPlayer;
+    }
+
+    @Override
+    public int getAskedPlayer() {
+        return askedPlayer;
+    }
+
+    @Override
+    public List<Effect> getEffectStack() {
+        return effectStack;
+    }
+
+    @Override
+    public List<Card> getTempGraveyard() {
+        return tempGraveyard;
+    }
+
+    @Override
+    public List<Event> getEventList() {
+        return eventList;
+    }
+
+    @Override
+    public Deck getDeck() {
+        return deck;
     }
 }

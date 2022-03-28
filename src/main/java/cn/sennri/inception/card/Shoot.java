@@ -62,7 +62,8 @@ public class Shoot extends AbcCard implements IShoot {
             if (ans < 2) {
                 game.shootDead(source, target);
             } else if (ans < 5) {
-                // todo 等待消息 这里先不写实现
+                // todo 发送一个消息给当前回合主客户端 让客户端触发询问动作
+                boolean go;
                 target.setPos(target.getPos().toNext());
             }
         }

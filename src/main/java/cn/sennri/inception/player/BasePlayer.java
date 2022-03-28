@@ -2,7 +2,8 @@ package cn.sennri.inception.player;
 
 import cn.sennri.inception.Effect;
 import cn.sennri.inception.card.Card;
-import cn.sennri.inception.field.Deck;
+import cn.sennri.inception.card.role.BaseRoleCard;
+import cn.sennri.inception.card.role.RoleCard;
 import cn.sennri.inception.server.Game;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -86,8 +87,8 @@ public class BasePlayer implements Player {
     }
 
     @Override
-    public void draw(Deck deck) {
-        roleCard.drawInDrawPhase();
+    public void draw(int times) {
+        roleCard.draw(times);
     }
 
     @Override
@@ -151,8 +152,7 @@ public class BasePlayer implements Player {
 
     @Override
     public void active(Effect effect, int[] targets) {
-        effect.setSourcePlayer(this);
-        effect.setTargets(targets);
+        effect.active(this, targets);
     }
 
     @Override

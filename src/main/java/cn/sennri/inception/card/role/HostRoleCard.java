@@ -1,5 +1,6 @@
-package cn.sennri.inception.player;
+package cn.sennri.inception.card.role;
 
+import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
 
 public class HostRoleCard extends BaseRoleCard {

@@ -181,17 +181,27 @@ takeEffect即效果结算环节，该环节分为四个步骤，
 
 # 设计概念
 
+## 状态控制位
+### lobby
+lobby现在在handle层面。 lobby通过lobbyCreated控制防止反复创建房间。
+isPlaying标志位用来区分游戏中和准备阶段（前者可以允许玩家加入，后者则不允许新玩家链接）
+### game
+waiting 等待玩家选择角色
+
+isAsking 赋予回合外玩家出牌权力。但该权力受限。
+当处于isAsking时，部分效果应当判读为不能发动。
+
 ## eventList
 eventList表示在一组连锁上所有发生的事件。
 
-在takeEffect时，意味着由这些事件可引发的效果已经不存在了，因此会清空evenList
+在takeEffect时，意味着由这些事件可引发的效果已经不存在了，即便有也没有选择发动，因此会清空evenList
 
-## unUnpdateEventlist
-另一个列表unUpdateEvenList保存在效果结算过程中堆积的新事件。通常，一个效果的事件是复合的。
+## unUpdateEventList
+列表unUpdateEvenList保存在效果结算过程中堆积的新事件。通常，一个效果的事件是复合的。
 
 这意味着他有多个结果，我们通常希望这些结果在一次推送过程中一起被更新在客户端上，而不是一个event推送一次，
 
-这样看起来效果是割裂的。
+否则那样看起来效果行为是割裂的。
 
 ## tempGraveyard 
 一组连锁上即将被送去墓地的卡片。如，发动完效果的卡片，以及被效果弃置、被cost弃置的卡片。

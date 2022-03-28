@@ -8,12 +8,14 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
+import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
@@ -25,6 +27,7 @@ import java.util.TimeZone;
  * @author Sennri
  */
 @Configuration
+@Slf4j
 public class ObjectMapperConfig {
     /**
      * 定义时间格式
@@ -46,8 +49,7 @@ public class ObjectMapperConfig {
     @Bean
     @Primary
     @ConditionalOnMissingBean(ObjectMapper.class)
-    public ObjectMapper jacksonObjectMapper(Jackson2ObjectMapperBuilder builder)
-    {
+    public ObjectMapper jacksonObjectMapper(Jackson2ObjectMapperBuilder builder) {
         objectMapper = builder.createXmlMapper(false).build();
         // 通过该方法对mapper对象进行设置，所有序列化的对象都将按该规则进行序列化
         // 写入时仅写入非空字段
@@ -60,9 +62,9 @@ public class ObjectMapperConfig {
           由于放在接口ModelParam.class @JsonTypeInfo注解会递归生效，对于没有子类的类型，在反序列化时也会查找其子类的反序列化方法
           为了防止这种错误的逻辑，需要配置若无可以使用的子类，就使用该类本身的反序列化方法。
          */
-        objectMapper.configure(MapperFeature.USE_BASE_TYPE_AS_DEFAULT_IMPL,true);
+        objectMapper.configure(MapperFeature.USE_BASE_TYPE_AS_DEFAULT_IMPL, true);
         // 拒绝序列化内容为空的beans并抛出错误
-        objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS,true);
+        objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, true);
         // 反序列化是拒绝名字不匹配的域，并抛出错误
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
 
@@ -77,8 +79,13 @@ public class ObjectMapperConfig {
      * @param objectMapper
      * @param clazz
      */
-    public static void registerPackage(ObjectMapper objectMapper,  Class<?> clazz){
-        Collection<Class<?>> classes = ClassUtils.getAllClassesInTheSamePackage(clazz);
-        objectMapper.registerSubtypes(classes);
+    public static void registerPackage(ObjectMapper objectMapper, Class<?> clazz) {
+        try {
+            Collection<Class<?>> classes = ClassUtils.getAllClassesInTheSamePackage(clazz);
+            objectMapper.registerSubtypes(classes);
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+            log.error("尝试读取包失败，无法注关联类。");
+        }
     }
 }

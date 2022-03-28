@@ -3,7 +3,7 @@ package cn.sennri.inception.player;
 
 import cn.sennri.inception.Effect;
 import cn.sennri.inception.card.Card;
-import cn.sennri.inception.field.Deck;
+import cn.sennri.inception.card.role.RoleCard;
 import cn.sennri.inception.util.GameUtils;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -47,9 +47,9 @@ public interface Player {
 
     /**
      * 这里可以设置自己抽到什么卡的回调。
-     * @param deck
+     * @param times 抽卡次数
      */
-    void draw(Deck deck);
+    void draw(int times);
 
     Integer getOrder();
 
@@ -57,6 +57,7 @@ public interface Player {
 
     String getName();
 
+    @Deprecated
     WebSocketSession getSocketSession();
 
     /**
@@ -75,9 +76,7 @@ public interface Player {
      */
     String getUid();
 
-    default void setRole(RoleCard roleCard){
-
-    }
+    void setRole(RoleCard roleCard);
 
     /**
      * 弃牌

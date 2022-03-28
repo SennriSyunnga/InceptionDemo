@@ -1,6 +1,7 @@
-package cn.sennri.inception.player;
+package cn.sennri.inception.card.role;
 
 import cn.sennri.inception.card.Card;
+import cn.sennri.inception.player.Player;
 import cn.sennri.inception.util.GameUtils;
 
 /**
@@ -36,6 +37,8 @@ public interface RoleCard extends Card {
      * @param p
      */
     boolean revive(Player p, int[] num);
+
+    void draw(int times);
 
     /**
      * 抽牌阶段抽卡

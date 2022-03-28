@@ -6,6 +6,7 @@ import cn.sennri.inception.player.Player;
 import java.util.List;
 
 public abstract class AbcCard implements Card{
+    // todo 是否应该在这里加入标志位： 是否可以在asking阶段发动 是否可以在xx phase阶段发动
 
     protected String cardName;
 
@@ -41,7 +42,6 @@ public abstract class AbcCard implements Card{
 
     @Override
     public void setOwner(Player newOwner){
-        Player originalOwner = owner;
         this.owner = newOwner;
     }
 

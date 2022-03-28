@@ -24,6 +24,11 @@ public interface Effect {
     boolean isActivable(Game game);
 
     /**
+     * 用来统计发动次数
+     */
+    void active(Player player, int[] targets);
+
+    /**
      * 服务端层面的校验, 检查对象是否合法。
      * @param game
      * @param source

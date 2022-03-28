@@ -43,5 +43,4 @@ public class GameUtilsTest {
                 .resultFormat(ResultFormatType.JSON).build();
         new Runner(opt).run();
     }
-
 }

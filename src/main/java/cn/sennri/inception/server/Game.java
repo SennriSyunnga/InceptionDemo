@@ -7,15 +7,12 @@ import cn.sennri.inception.config.socket.SpringWebSocketHandler;
 import cn.sennri.inception.event.*;
 import cn.sennri.inception.field.Deck;
 import cn.sennri.inception.field.DeckImpl;
-import cn.sennri.inception.message.GameOverMessage;
-import cn.sennri.inception.message.ServerStartGameMessage;
-import cn.sennri.inception.message.UpdatePushMessage;
-import cn.sennri.inception.message.UpdatePushMessageImpl;
+import cn.sennri.inception.message.*;
 import cn.sennri.inception.model.listener.Listener;
 import cn.sennri.inception.player.BasePlayer;
 import cn.sennri.inception.player.HostPlayer;
 import cn.sennri.inception.player.Player;
-import cn.sennri.inception.player.RoleCard;
+import cn.sennri.inception.card.role.RoleCard;
 import cn.sennri.inception.util.GameUtils;
 import cn.sennri.inception.util.ListNode;
 import org.springframework.web.socket.WebSocketSession;
@@ -166,8 +163,10 @@ public class Game {
             pushUnUpdateMessage();
             // 结算抽卡引发的次生效果，这里会进行一个ask;
             takeAllEffects();
-            // 这里增加一个回合切换Event 要不抽象为效果
 
+            // 结束回合该阶段。
+            unPushEvenList.add(new PhaseEndEvent());
+            pushUnUpdateMessage();
 
             asking(turnOwner);
             return true;
@@ -175,6 +174,33 @@ public class Game {
             // 回绝
             return false;
         }
+    }
+
+    /**
+     *
+     * @param player 抽卡玩家
+     * @param drawTimes 抽卡次数
+     */
+    public List<Card> drawDeck(Player player, int drawTimes) {
+        List<Card> cards = new ArrayList<>(drawTimes);
+        int[] cardIds = new int[drawTimes];
+        for (int i = 0; i < drawTimes; i++) {
+            // 这样写怎么触发回调呢……
+            Card card = this.deck.draw();
+            if (deck.isEmpty()) {
+                gameOver(true);
+                // 返回值无所谓了
+                return null;
+            }
+            player.getHandCards().add(card);
+            cards.add(card);
+            cardIds[i] = card.getUid();
+        }
+        // todo
+        DrawEvent drawEvent = new DrawEvent(player.getOrder(), drawTimes);
+        handler.sendMessageToCertainUser(Collections.singletonList(player.getSocketSession()), new DrawMessage(cardIds));
+        unPushEvenList.add(drawEvent);
+        return cards;
     }
 
     /**
@@ -213,7 +239,7 @@ public class Game {
 
 
     /**
-     * 发生击杀结果
+     * 发生击杀结果 todo 这里错了，击杀是玩家自己选给什么牌的
      * @param source
      * @param target
      */
@@ -253,7 +279,7 @@ public class Game {
     protected List<Card> usedCardInThisTurn = new ArrayList<>();
 
     /**
-     * 发动手牌效果接口
+     * 发动手牌效果接口 应当上移到controller层
      * @param source 效果来源
      * @param card 发动卡片
      * @param num   效果序号
@@ -291,8 +317,22 @@ public class Game {
         }
     }
 
-    private void active(Effect e) {
-        effectChain.add(e);
+
+    /**
+     * 墓地里的强制发动效果
+     * @param card
+     * @param num
+     */
+    private void active(Card card, int num) {
+//        effectChain.add(e);
+        ActiveEvent activeEvent = new ActiveEvent();
+        activeEvent.setCardUid(card.getUid());
+        activeEvent.setEffectNum(num);
+//        activeEvent.setObject(targets);
+//        activeEvent.setSubject(source.getOrder());
+        activeEvent.setHandCardEffect(card.getOwner() != null);
+        unPushEvenList.add(activeEvent);
+        pushUnUpdateMessage();
     }
 
 
@@ -419,23 +459,6 @@ public class Game {
             cardIds[i] = card.getUid();
         }
         unPushEvenList.add(new AbandonEvent(cardIds));
-    }
-
-    /**
-     *
-     * @param player 抽卡玩家
-     * @param drawTimes 抽卡次数
-     */
-    public void drawDeck(Player player, int drawTimes) {
-        for (int i = 0; i < drawTimes; i++) {
-            if (deck.size() == 0) {
-                gameOver(true);
-            }
-            Card card = this.deck.draw();
-            player.getHandCards().add(card);
-        }
-        DrawEvent drawEvent = new DrawEvent();
-        unPushEvenList.add(drawEvent);
     }
 
     /**
@@ -572,7 +595,7 @@ public class Game {
                 // 若不为空
                 while (lastChainIndex > 0) {
                     Effect e = effectChain.remove(lastChainIndex);
-                    // 效果结算, 在这里头添加各种event
+                    // 效果结算, 效果通过调用组合game的各种api而实现在eventList中添加新的事件
                     e.takeEffect(this);
                     // 推送更新数据到客户端 增加新的Event到eventList
                     pushUnUpdateMessage();
@@ -585,7 +608,7 @@ public class Game {
                     Card c = tempGraveyard.remove(0);
                     // 只当是时间风暴
                     if (c.isActivable(this)) {
-                        active(c.getEffect(0));
+                        active(c, 0);
                     }
                     tempGraveyardSize--;
                 }
@@ -656,7 +679,7 @@ public class Game {
         this.statusEnum = GameStatusEnum.PLAYING;
     }
 
-    // 推出尚未
+    // 推出尚未推送的事件
     public void pushUnUpdateMessage() {
         pushUpdateMessage(unPushEvenList);
         eventList.addAll(unPushEvenList);

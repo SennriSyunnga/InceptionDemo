@@ -1,5 +1,6 @@
 package cn.sennri.inception.player;
 
+import cn.sennri.inception.card.role.HostRoleCard;
 import cn.sennri.inception.server.Game;
 import org.springframework.web.socket.WebSocketSession;
 
