@@ -39,6 +39,10 @@ public interface Effect {
         return isActivable(game);
     }
 
+    /**
+     * 卡片文字描述信息。
+     * @return
+     */
     String getDescription();
 
     /**

@@ -1,8 +1,6 @@
 package cn.sennri.inception.server.controller;
 
-import cn.sennri.inception.player.BasePlayer;
 import cn.sennri.inception.player.Player;
-import cn.sennri.inception.server.Game;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,12 +11,10 @@ import org.springframework.web.socket.WebSocketHandler;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Sennri

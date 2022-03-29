@@ -188,8 +188,12 @@ isPlaying标志位用来区分游戏中和准备阶段（前者可以允许玩�
 ### game
 waiting 等待玩家选择角色
 
-isAsking 赋予回合外玩家出牌权力。但该权力受限。
-当处于isAsking时，部分效果应当判读为不能发动。
+isAsking 赋予回合外玩家出牌权力。牌的发动需要校验三个状态， 是否为回合主、是否asking
+
+任何效果都应该独立校验自己是否能在回合外发动。
+
+*如果将所有询问时都置状态为isAsking，可能会导致一些不正当的效果满足发动，
+也许还要再加一个控制位区分询问是否发动效果，和是否做出选择，但是目前我们不要考虑这个问题。*
 
 ## eventList
 eventList表示在一组连锁上所有发生的事件。
@@ -207,7 +211,7 @@ eventList表示在一组连锁上所有发生的事件。
 一组连锁上即将被送去墓地的卡片。如，发动完效果的卡片，以及被效果弃置、被cost弃置的卡片。
 
 # todo
-// 在一定时间内尝试推送一个同一编号的消息
+1. 在一定时间内尝试推送一个同一编号的消息
 如果超过一定时长没有得到回应，则push第二次，
 尝试数次后，则无视此次的推送失败。
 remove掉本地的listener
@@ -225,11 +229,18 @@ game在目前的设计中，既充当handle操作Player的媒介
 
 计划中应该设计成这样：
 handle → controller.revive A B→ 分发给Player → A player.reviveB → roleCard.reviveB → B player.awaken → B roleCard.awaken →  触发被动
-                                                                    ↓      ↓                                ↓
-                                                            game.discard  game.revive                game.awaken
-                                                                    ↓      ↓                                ↓
-                                                          PlayerA.discard                         B player.setStatus(LIVE)
+                                                                    ↓          ↓                                ↓
+                                                          PlayerA.discard  game.revive ?                game.awaken
+                                                                    ↓          ↓                               ↓
+                                                            game.discard  纯粹的宣言触发动画        B player.setStatus(LIVE)
                                                           
-                                                          
-                                                          
-player 的所有操作都不操作自身。而是代理到role当中， role的行为是game 的原子性事件的 拼合
+controller → player → role → game → 操作player;
+controller 层负责接收handle上的指令， player 作为容器，负责调用 role， role 负责差异化地实现动作，组合一些角色行为
+
+player 的所有操作都不操作自身。而是代理到role当中
+
+指令处理如果已经到达role这个层面了，就没必要回头调自己的player层方法了，因为这不会有什么好处，徒增复杂性。
+
+# 一些结论
+player可以写成泛型 <T exntends RoleCard>？
+不可以，player层是为了保证交换roleCard的实现变得简单。否则，完全可以合并roleCard和player两个层。

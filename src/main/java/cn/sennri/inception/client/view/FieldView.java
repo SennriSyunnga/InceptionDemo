@@ -5,10 +5,8 @@ import cn.sennri.inception.GameInfo;
 import cn.sennri.inception.card.Card;
 import cn.sennri.inception.event.*;
 import cn.sennri.inception.field.Deck;
-import cn.sennri.inception.message.EffectChainCleanMessage;
-import cn.sennri.inception.message.Message;
-import cn.sennri.inception.message.ServerEventCleanMessage;
-import cn.sennri.inception.message.UpdatePushMessage;
+import cn.sennri.inception.message.*;
+import cn.sennri.inception.model.listener.Listener;
 import cn.sennri.inception.player.Player;
 import cn.sennri.inception.server.Game;
 import cn.sennri.inception.util.GameUtils;
@@ -44,7 +42,7 @@ public class FieldView implements GameInfo {
      * 生成selfPointer，用于标识本玩家
      * 主要用于初始化内部的各种域
      *
-     * @param name
+     * @param name client本地存储的本机玩家名字。
      */
     public void initialize(String name) {
         PlayerView[] views = this.playerViews;
@@ -131,11 +129,23 @@ public class FieldView implements GameInfo {
 
     Deck deck;
 
+    /**
+     * 消费普通信息
+     * @param m
+     */
     public void consumeMessage(Message m){
-        if (m instanceof ServerEventCleanMessage){
+        if (m instanceof ServerCleanEventAndEffectChainMessage){
             this.eventList.clear();
-        }else if (m instanceof EffectChainCleanMessage){
             this.effectStack.clear();
+        }else if (m instanceof UpdatePushMessage) {
+            this.consumeUpdateMessage((UpdatePushMessage) m);
+        } else if (m instanceof GameOverMessage) {
+            boolean hostWin = ((GameOverMessage) m).getHostWin();
+            if (hostWin) {
+                log.info("梦主胜利");
+            } else {
+                log.info("盗梦阵营胜利");
+            }
         }
     }
 

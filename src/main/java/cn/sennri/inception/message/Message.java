@@ -23,4 +23,5 @@ public interface Message {
      */
     Long getMessageId();
 
+    void setMessageId(Long id);
 }

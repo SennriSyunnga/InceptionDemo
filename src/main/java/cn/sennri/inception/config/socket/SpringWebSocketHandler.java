@@ -23,6 +23,7 @@ import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 public class SpringWebSocketHandler extends TextWebSocketHandler {
@@ -49,7 +50,7 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
     /**
      * 维护一个等待结果的消息map，根据MessageId取消息。
      */
-    Map<Long, Listener<?>> map = new ConcurrentHashMap<>();
+    Map<Long, Listener<?>> listenerHookMap = new ConcurrentHashMap<>();
 
     /**
      * 指向本机的socket，大厅创建时保留该引用
@@ -174,8 +175,14 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
             } else if (m instanceof ReviveMessage) {
                 ReviveMessage reviveMessage = (ReviveMessage) m;
                 game.revive(p, reviveMessage.getTargetNum(), reviveMessage.getCostCardNum());
+            }else if (m instanceof ClientChosenCardMessage){
+                int[] cardIds = ((ClientChosenCardMessage) m).getCardIds();
+                long messageId = ((ClientChosenCardMessage) m).getReplyId();
+                Listener<int[]> listener = (Listener<int[]>)listenerHookMap.get(messageId);
+                listener.setBlocking(cardIds);
             }
         } else {
+            // 开始游戏，由房主发出，没有异步的必要。
             if (m instanceof StartGameMessage) {
                 if (session == hostSocket) {
                     // check 准备状态
@@ -188,6 +195,7 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
                     }
                 }
             } else if (m instanceof ClientReadyMessage) {
+                // 动作非阻塞，可以考虑用异步来提升性能。
                 readySessionSet.add(session);
             }
         }
@@ -290,6 +298,25 @@ public class SpringWebSocketHandler extends TextWebSocketHandler {
                 ex.printStackTrace();
             }
         }
+    }
+
+    private final AtomicLong messageNum = new AtomicLong(0);
+
+    /**
+     * 获取消息的版本号，如果到达long极限值，则清空至0L
+     * @return
+     */
+    private long getMessageNum() {
+        return messageNum.getAndUpdate(o -> o == Long.MAX_VALUE ? 0 : o + 1);
+    }
+
+    public <T> Listener<T> sendAndWait(WebSocketSession session, Message message) throws IOException {
+        long messageId = getMessageNum();
+        message.setMessageId(messageId);
+        this.sendMessage(session, message);
+        Listener<T> listener = new Listener<>();
+        listenerHookMap.put(messageId, listener);
+        return listener;
     }
 
 }

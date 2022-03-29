@@ -1,14 +1,10 @@
 package cn.sennri.inception.client.controller;
 
 import cn.sennri.inception.client.view.FieldView;
-import cn.sennri.inception.event.Event;
-import cn.sennri.inception.event.PhaseEndEvent;
-import cn.sennri.inception.event.TurnEndEvent;
 import cn.sennri.inception.message.*;
 import cn.sennri.inception.model.listener.Listener;
-import cn.sennri.inception.model.vo.ResponseBodyImpl;
+import cn.sennri.inception.model.vo.ResponseBody;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
@@ -16,10 +12,7 @@ import okio.ByteString;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.ResponseBody;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -56,9 +49,9 @@ public class ClientController {
     // 先当成unique的吧。
     public String name;
 
-    @ResponseBody
+    @org.springframework.web.bind.annotation.ResponseBody
     @RequestMapping(value = "/login", method = RequestMethod.POST)
-    public ResponseBodyImpl<Response> login(@RequestParam String name, @RequestParam String remoteAddr) throws InterruptedException {
+    public ResponseBody<Response> login(@RequestParam String name, @RequestParam String remoteAddr) throws InterruptedException {
         this.name = name;
         final String url = "ws://" + remoteAddr + ":" + PORT + "/socket/server";
         // 构建一个连接请求对象
@@ -91,6 +84,7 @@ public class ClientController {
                     return;
                 }
                 if (fieldView == null) {
+                    // 生成filedView
                     if (m instanceof ServerStartGameMessage) {
                         ServerStartGameMessage message = (ServerStartGameMessage) m;
                         fieldView = message.getFiledView();
@@ -113,15 +107,8 @@ public class ClientController {
                     } else {
                         log.debug("Message id{} is consumed already", id);
                     }
-                } else if (m instanceof UpdatePushMessage) {
-                    fieldView.consumeUpdateMessage((UpdatePushMessage) m);
-                } else if (m instanceof GameOverMessage) {
-                    boolean hostWin = ((GameOverMessage) m).getHostWin();
-                    if (hostWin) {
-                        log.info("梦主胜利");
-                    } else {
-                        log.info("盗梦阵营胜利");
-                    }
+                } else {
+                    fieldView.consumeMessage(m);
                 }
                 log.debug("Client received message:{}", text);
             }
@@ -146,21 +133,20 @@ public class ClientController {
         });
         Response res = responseListener.getBlocking();
         if (HttpStatus.SWITCHING_PROTOCOLS.value() == res.code()) {
-            return ResponseBodyImpl.createNewResponse(res, HttpStatus.OK, "连接成功，已注册到服务器中");
+            return ResponseBody.createNewResponse(res, HttpStatus.OK, "连接成功，已注册到服务器中");
         } else {
-            return ResponseBodyImpl.createNewResponse(res, HttpStatus.CONFLICT);
+            return ResponseBody.createNewResponse(res, HttpStatus.CONFLICT);
         }
-        // 这里应该阻塞地等待当前open是否成功。
     }
 
-    @ResponseBody
+    @org.springframework.web.bind.annotation.ResponseBody
     @RequestMapping(value = "/logout", method = RequestMethod.POST)
-    public ResponseBodyImpl<String> logout() {
+    public ResponseBody<String> logout() {
         if (this.webSocket == null) {
             throw new IllegalStateException("不合法的关闭");
         } else {
             webSocket.close(1000, "用户选择退出服务。");
-            return ResponseBodyImpl.createNewResponse(HttpStatus.ACCEPTED);
+            return ResponseBody.createNewResponse(HttpStatus.ACCEPTED);
         }
     }
 
@@ -169,7 +155,7 @@ public class ClientController {
      */
     Map<Long, Listener<?>> map = new ConcurrentHashMap<>();
 
-    AtomicLong messageNum = new AtomicLong(0);
+    private AtomicLong messageNum = new AtomicLong(0);
 
     /**
      * 获取消息的版本号，如果到达long极限值，则清空至0L
@@ -179,21 +165,24 @@ public class ClientController {
         return messageNum.getAndUpdate(o -> o == Long.MAX_VALUE ? 0 : o + 1);
     }
 
-    @ResponseBody
+    @org.springframework.web.bind.annotation.ResponseBody
     @RequestMapping(value = "/test2", method = RequestMethod.POST)
-    public ResponseBodyImpl<?> testMultiThread() throws JsonProcessingException {
+    public ResponseBody<?> testMultiThread() throws JsonProcessingException {
         TestMessage testMessage = new TestMessage();
         sendMessage(testMessage);
-        return ResponseBodyImpl.createNewResponse(HttpStatus.OK);
+        return ResponseBody.createNewResponse(HttpStatus.OK);
     }
 
     public void sendMessage(Message message) throws JsonProcessingException {
+        if (this.webSocket == null) {
+            throw new IllegalStateException("尚未初始化webSocket客户端。请先执行登录");
+        }
         webSocket.send(jacksonObjectMapper.writeValueAsString(message));
     }
 
-    @ResponseBody
+    @org.springframework.web.bind.annotation.ResponseBody
     @RequestMapping(value = "/test", method = RequestMethod.POST)
-    public ResponseBodyImpl<?> active() throws JsonProcessingException {
+    public ResponseBody<?> active() throws JsonProcessingException {
         if (this.webSocket == null) {
             throw new IllegalStateException("未连接到服务器，请检查是否已登录");
         } else {
@@ -208,13 +197,13 @@ public class ClientController {
                 answer = booleanListener.getBlocking();
             } catch (InterruptedException e) {
                 e.printStackTrace();
-                return ResponseBodyImpl.createNewResponse(HttpStatus.INTERNAL_SERVER_ERROR);
+                return ResponseBody.createNewResponse(HttpStatus.INTERNAL_SERVER_ERROR);
             }
             log.debug("Active {}!", answer);
             if (answer) {
-                return ResponseBodyImpl.createNewResponse(HttpStatus.OK);
+                return ResponseBody.createNewResponse(HttpStatus.OK);
             } else {
-                return ResponseBodyImpl.createNewResponse(HttpStatus.CONFLICT);
+                return ResponseBody.createNewResponse(HttpStatus.CONFLICT);
             }
         }
     }

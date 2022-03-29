@@ -9,6 +9,7 @@ public class ClientActiveMessage extends AbstractMessage implements Message{
         return messageId;
     }
 
+    @Override
     public void setMessageId(Long messageId) {
         this.messageId = messageId;
     }

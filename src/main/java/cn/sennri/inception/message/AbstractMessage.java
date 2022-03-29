@@ -11,6 +11,7 @@ public abstract class AbstractMessage implements Message{
      */
     protected Long messageId;
 
+    @Override
     public void setMessageId(Long messageId) {
         this.messageId = messageId;
     }

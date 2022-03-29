@@ -18,6 +18,7 @@ import cn.sennri.inception.util.ListNode;
 import org.springframework.web.socket.WebSocketSession;
 
 import javax.validation.constraints.NotNull;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -245,12 +246,40 @@ public class Game {
      */
     public void shootDead(Player source, Player target) {
         target.setStatus(Player.StatusEnum.LOST);
-        seizeCard(source, target, 2);
+        List<Card> targetHand = target.getHandCards();
+        List<Card> murdererHand = source.getHandCards();
+        if (!targetHand.isEmpty()){
+            if (targetHand.size() <= 2){
+                int[] cardIds = targetHand.stream().mapToInt(Card::getUid).toArray();
+                PrivateTransferCardMessage transferCardMessage = new PrivateTransferCardMessage(cardIds);
+                handler.sendMessageToCertainUser(Arrays.asList(source.getSocketSession(), target.getSocketSession()), transferCardMessage);
+                for (int i = 0, targetHandSize = targetHand.size(); i < targetHandSize; i++) {
+                    murdererHand.add(murdererHand.remove(0));
+                }
+            }else{
+                Listener<int[]> cardsListner = null;
+                try {
+                    cardsListner = handler.sendAndWait(source.getSocketSession(), new ServerChoosingHandCardMessage(2));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                // 这里
+                int [] cardIds = new int[0];
+                try {
+                    cardIds = cardsListner.getBlocking();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                PrivateTransferCardMessage transferCardMessage = new PrivateTransferCardMessage(cardIds);
+                handler.sendMessageToCertainUser(Arrays.asList(source.getSocketSession(), target.getSocketSession()), transferCardMessage);
+            }
+        }
+//        seizeCard(source, target, 2);
         unPushEvenList.add(new ShootDeadEvent(source.getOrder(), target.getOrder()));
     }
 
     /**
-     * todo
+     * 该实现不正确。shootDown应该等待玩家自己挑选牌交出去
      * @param source
      * @param target
      * @param num
@@ -504,8 +533,9 @@ public class Game {
                 } catch (BrokenBarrierException | InterruptedException e) {
                     e.printStackTrace();
                 }
-                // 此时说明asking和其延伸问询全部结束，此时应该清算结果
+                // 此时说明asking和其延伸问询全部结束，此时应该清算结果。 易知，此时isAsking置为false
                 takeAllEffects();
+                // takeAllEffects最后会进行一次ask，但是因为ask是非阻塞的，无法判断出来时isAsking的状态
             });
         } else {
             // 这一次的asking不会开启新的循环，只会使得上一个循环中的await被解冻
@@ -549,7 +579,8 @@ public class Game {
     }
 
     /**
-     * 当前用户放弃响应操作
+     * 当前用户放弃响应操作则调用这个接口
+     * controller层该校验是否为当前回合玩家。
      */
     public void pass() {
         if (!isAsking.get()) {
@@ -590,7 +621,8 @@ public class Game {
             synchronized (this) {
                 // 该由这一组event引发的效果已经发动完了，应当结算掉这组event
                 eventList.clear();
-                // todo send clean message
+                // todo 这里应该发送一个消息同步清空掉其余客户端的事件缓存区和效果缓存区。
+                handler.sendMessageToAllUsers(new ServerCleanEventAndEffectChainMessage());
 
                 // 若不为空
                 while (lastChainIndex > 0) {
@@ -603,20 +635,20 @@ public class Game {
                 }
                 // 检查墓地效果起效， 比如弃牌阶段诱发的时间风暴在这个时候结算
                 int tempGraveyardSize = tempGraveyard.size();
+                // 此处清空墓地缓存
                 while (tempGraveyardSize > 0) {
                     // 将暂存区的这张卡去除
                     Card c = tempGraveyard.remove(0);
-                    // 只当是时间风暴
+                    // 默认这是时间风暴，发动1效果
                     if (c.isActivable(this)) {
                         active(c, 0);
                     }
                     tempGraveyardSize--;
                 }
-                // 此处清空墓地缓存
             }
-            // 此时可能由新的takeEffect导致evenList堆积，或者添加了次生的效果
+            // 此时可能由新的takeEffect导致evenList堆积，或者添加了次生的效果 到这一步时，asking一定为false
             asking(host);
-            // 这里是不是应该阻塞等待asking结束？
+            // todo 这里应该等待askinghost结束吗？
         }
     }
 
@@ -669,7 +701,7 @@ public class Game {
                 if (layerNum == secret) {
                     // notify GameStop
                 } else {
-                    // notify NightMare
+                    // notify NightMareCard
                 }
             }
         }
@@ -679,7 +711,9 @@ public class Game {
         this.statusEnum = GameStatusEnum.PLAYING;
     }
 
-    // 推出尚未推送的事件
+    /**
+     * 推出尚未推送的事件
+     */
     public void pushUnUpdateMessage() {
         pushUpdateMessage(unPushEvenList);
         eventList.addAll(unPushEvenList);

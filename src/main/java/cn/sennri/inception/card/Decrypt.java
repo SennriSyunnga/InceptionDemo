@@ -48,6 +48,7 @@ public class Decrypt extends AbcCard {
 
         @Override
         public boolean isActivable(Game game) {
+            // 必须为asking阶段才能使用
             if (!game.getIsAsking().get()) {
                 return false;
             }
